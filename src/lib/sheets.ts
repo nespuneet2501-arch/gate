@@ -1,7 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, signInWithPopup, GoogleAuthProvider, 
-  onAuthStateChanged, User, signOut
+  onAuthStateChanged, User, signOut,
+  getRedirectResult
 } from 'firebase/auth';
 import { 
   Student, PickupRequest, SecurityLog, AppNotification, EmailLog 
@@ -59,6 +60,28 @@ export const initSheetsAuth = (
   onAuthSuccess: (user: User, token: string) => void,
   onAuthFailure: () => void
 ) => {
+  // Avoid calling getRedirectResult inside an iframe environment as Google blocks redirect logins within iframes (403 errors),
+  // and browser storage security throws unauthorized-domain exceptions.
+  const isIframe = window.self !== window.top;
+  if (!isIframe) {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          const credential = GoogleAuthProvider.credentialFromResult(result);
+          if (credential?.accessToken) {
+            cachedAccessToken = credential.accessToken;
+            localStorage.setItem('goenka_sheets_token', cachedAccessToken);
+            if (result.user) {
+              onAuthSuccess(result.user, cachedAccessToken);
+            }
+          }
+        }
+      })
+      .catch((error) => {
+        console.warn('Silent notice: redirect login result skipped/unsupported in iframe:', error);
+      });
+  }
+
   return onAuthStateChanged(auth, async (user: User | null) => {
     const savedToken = localStorage.getItem('goenka_sheets_token');
     if (user && (cachedAccessToken || savedToken)) {
@@ -76,10 +99,11 @@ export const initSheetsAuth = (
   });
 };
 
-// Sign in via Firebase Popup
+// Sign in via Firebase Popup (always avoid redirect logins inside the iframe)
 export const loginWithGoogleSheets = async (): Promise<{ user: User; accessToken: string } | null> => {
   try {
     isSigningIn = true;
+    
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
@@ -88,7 +112,7 @@ export const loginWithGoogleSheets = async (): Promise<{ user: User; accessToken
     cachedAccessToken = credential.accessToken;
     localStorage.setItem('goenka_sheets_token', cachedAccessToken);
     return { user: result.user, accessToken: cachedAccessToken };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Google Sheets Sign in failure:', error);
     throw error;
   } finally {
@@ -262,6 +286,8 @@ export const writeSheetData = async (
       throw new Error("Access forbidden. Please ensure you checked are granted Google Sheets and Google Drive permissions during the Google login prompt.");
     }
     if (res.status === 401) {
+      localStorage.removeItem('goenka_sheets_token');
+      cachedAccessToken = null;
       throw new Error("Session expired or unauthorized. Please disconnect and reconnect your Google Sheets account.");
     }
     const errorText = await res.text();
@@ -289,6 +315,8 @@ export const readSheetData = async (
         throw new Error("Access forbidden. Please ensure you checked and granted Google Sheets and Google Drive permissions during the Google login prompt.");
       }
       if (res.status === 401) {
+        localStorage.removeItem('goenka_sheets_token');
+        cachedAccessToken = null;
         throw new Error("Session expired or unauthorized. Please disconnect and reconnect your Google Sheets account.");
       }
       if (res.status === 404) {

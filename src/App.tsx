@@ -191,7 +191,7 @@ export default function App() {
   // Google Sheets Authentication Listener on Mount
   useEffect(() => {
     const unsubscribe = initSheetsAuth(
-      (user, token) => {
+      async (user, token) => {
         setSheetsUser(user);
         setSheetsToken(token);
         const cachedId = localStorage.getItem('goenka_sheets_spreadsheet_id');
@@ -201,11 +201,33 @@ export default function App() {
           setSheetsSyncStatus('connected');
           // Automatically sync data
           bootstrapSheetsWithAppState(token, cachedId);
+        } else {
+          // If no cached sheet ID exists yet (first-time login via redirect),
+          // set up the spreadsheet and tables automatically on return!
+          try {
+            setSheetsSyncStatus('syncing');
+            const sheetDetails = await createSpreadsheetWithTables(token);
+            setSheetsSpreadsheetId(sheetDetails.id);
+            setSheetsSpreadsheetUrl(sheetDetails.url);
+            
+            localStorage.setItem('goenka_sheets_sync_status', 'connected');
+            localStorage.setItem('goenka_sheets_user_email', user.email || '');
+            localStorage.setItem('goenka_sheets_token', token);
+            localStorage.setItem('goenka_sheets_spreadsheet_id', sheetDetails.id);
+            
+            setSheetsSyncStatus('connected');
+            // Bootstrap/Seed the database
+            await bootstrapSheetsWithAppState(token, sheetDetails.id);
+          } catch (err: any) {
+            console.error("Auto-setup Sheets after redirect login failure:", err);
+            setSheetsSyncStatus('error');
+            setSheetsErrorMsg(err.message || 'Auto-setup Sheets Failed');
+          }
         }
       },
       () => {
-        const cachedToken = localStorage.getItem('goenka_sheets_token');
         const cachedId = localStorage.getItem('goenka_sheets_spreadsheet_id');
+        const cachedToken = localStorage.getItem('goenka_sheets_token');
         if (cachedToken && cachedId) {
           setSheetsToken(cachedToken);
           setSheetsSpreadsheetId(cachedId);
@@ -355,7 +377,13 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       setSheetsSyncStatus('error');
-      setSheetsErrorMsg('Failed to initialize or read tables from Google Sheets.');
+      
+      const errMsg = err.message || '';
+      if (errMsg.toLowerCase().includes('expired') || errMsg.toLowerCase().includes('unauthorized') || errMsg.toLowerCase().includes('401')) {
+        setSheetsErrorMsg('Your Google Sheets authorization session has expired. Firebase token limits are exactly 1 hour. Simply click the button below to log back in and resume background real-time sync.');
+      } else {
+        setSheetsErrorMsg(errMsg || 'Failed to initialize or read tables from Google Sheets.');
+      }
     }
   };
 
