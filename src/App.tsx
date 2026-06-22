@@ -279,8 +279,7 @@ export default function App() {
         if (loadedEmails.length > 0) setEmailLogs(loadedEmails);
 
         setSheetsSyncStatus('synced');
-        addNotification("Google Sheets Restored", "Existing records successfully imported from Google Sheets.", "system");
-        alert("🎉 Existing database found in Google Sheets! Data has been automatically restored & synchronized into the app.");
+        addNotification("Google Sheets Restored", "Existing records successfully imported from Google Sheets. App synchronized in real-time.", "system");
         return;
       }
 
@@ -1149,25 +1148,123 @@ export default function App() {
                   </p>
                   
                   {sheetsSyncStatus === 'error' && (
-                    <div className="bg-rose-950/40 border border-rose-900/40 rounded-xl p-3 text-[10px] text-rose-300 font-mono leading-normal">
-                      ⚠️ {sheetsErrorMsg}
+                    <div className="space-y-3 animate-fade-in">
+                      <div className="bg-rose-950/40 border border-rose-900/40 rounded-xl p-3 text-[10px] text-rose-300 font-mono leading-normal">
+                        ⚠️ Message: {sheetsErrorMsg}
+                      </div>
+
+                      {/* Google Sheets Scope Permissions Guide */}
+                      {(sheetsErrorMsg.toLowerCase().includes('forbidden') || 
+                        sheetsErrorMsg.toLowerCase().includes('permission') || 
+                        sheetsErrorMsg.toLowerCase().includes('access') ||
+                        sheetsErrorMsg.toLowerCase().includes('scope') || 
+                        sheetsErrorMsg.toLowerCase().includes('unauthorized')) && (
+                        <div className="bg-slate-950 border border-emerald-500/20 rounded-xl p-3.5 space-y-2.5 text-[11px] text-slate-300">
+                          <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider text-[9.5px]">
+                            <Database size={12} className="text-emerald-440" />
+                            📝 Google Drive & Sheets Permission Fix
+                          </div>
+                          <p className="text-slate-400 leading-relaxed text-[10.5px]">
+                            Google requires you to explicitly grant the app permission to modify files and sheets in your Drive.
+                          </p>
+                          <div className="space-y-1.5 text-slate-300 text-[10.5px] font-medium leading-normal bg-slate-900/50 p-2.5 rounded-lg border border-slate-850">
+                            <div><strong className="text-emerald-300">1.</strong> Click the red <strong className="text-rose-350">Disconnect / Reset</strong> button below.</div>
+                            <div><strong className="text-emerald-300">2.</strong> Click <strong className="text-emerald-400">Deploy Google Sheets Database</strong> to sign in.</div>
+                            <div><strong className="text-emerald-300">3.</strong> In the Google login screen, <strong className="text-emerald-300">MAKE SURE TO TICK/CHECK</strong> both optional permission boxes:</div>
+                            <ul className="list-disc list-inside pl-1 text-[9.5px] text-slate-400 space-y-0.5 leading-normal">
+                              <li>"See, edit, create, and delete all your Google Sheets spreadsheets"</li>
+                              <li>"See, edit, create, and delete only the specific Google Drive files..."</li>
+                            </ul>
+                            <div className="pt-1"><strong className="text-emerald-300">4.</strong> Click <strong className="text-slate-200">Continue</strong> and your databases will link instantly!</div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Firebase Domain Whitelist Guide */}
+                      {(sheetsErrorMsg.toLowerCase().includes('unauthorized-domain') || 
+                        sheetsErrorMsg.toLowerCase().includes('unauthorized domain') || 
+                        sheetsErrorMsg.toLowerCase().includes('domain') ||
+                        sheetsErrorMsg.toLowerCase().includes('popup')) && (
+                        <div className="bg-slate-950 border border-amber-500/20 rounded-xl p-3.5 space-y-2.5 text-[11px] text-slate-300">
+                          <div className="flex items-center gap-1.5 text-amber-400 font-bold uppercase tracking-wider text-[9.5px]">
+                            <Database size={12} className="text-amber-400" />
+                            🔑 Quick 1-Minute Firebase Whitelist Fix
+                          </div>
+                          <p className="text-slate-400 leading-relaxed text-[10.5px]">
+                            Since the app is hosted inside the secure AI Studio development preview iframe, Google requires whitelisting this preview domain in your Firebase Authentication.
+                          </p>
+                          <div className="space-y-1.5 text-slate-300 text-[10.5px] font-medium leading-normal bg-slate-900/50 p-2.5 rounded-lg border border-slate-850">
+                            <div><strong className="text-amber-200">1.</strong> Open the <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline font-bold inline-flex items-center gap-0.5">Firebase Console ↗</a></div>
+                            <div><strong className="text-amber-200">2.</strong> Select project: <code className="bg-slate-950 px-1 py-0.5 rounded text-amber-300 font-mono">gen-lang-client-0530494758</code></div>
+                            <div><strong className="text-amber-200">3.</strong> In the left sidebar, click **Authentication** (usually at the top of the list, or under the **Build** dropdown. If not visible, search "Authentication" at the top).</div>
+                            <div><strong className="text-amber-200">4.</strong> On the Authentication dashboard, look at the top menu tabs and click **Settings** (next to *Users*, *Sign-in method*, etc.).</div>
+                            <div><strong className="text-amber-200">5.</strong> On the left side-menu of that Settings page, click **Authorized domains**.</div>
+                            <div><strong className="text-amber-200">6.</strong> Click the **Add domain** button and paste the copied domain below:</div>
+                            <div className="flex items-center gap-1 mt-1 font-mono">
+                              <input 
+                                type="text" 
+                                readOnly 
+                                value={window.location.hostname} 
+                                className="bg-slate-950 text-emerald-450 text-[10px] p-1.5 px-2 rounded-lg border border-slate-800 flex-grow select-all focus:outline-none"
+                              />
+                              <button 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(window.location.hostname);
+                                  alert("Domain copied to clipboard! Paste it into Firebase Authorized Domains.");
+                                }}
+                                className="bg-emerald-800 text-white hover:bg-emerald-700 p-1.5 px-2.5 rounded-lg font-bold text-[9px] uppercase tracking-wider cursor-pointer active:scale-95 transition"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                            {window.location.hostname.includes('-dev-') && (
+                              <div className="text-[9.5px] text-amber-400/80 mt-1 leading-normal italic">
+                                *Tip: If you'll share this app, also add the preview domain: <code className="bg-slate-950 px-1 font-mono">{window.location.hostname.replace('-dev-', '-pre-')}</code>
+                              </div>
+                            )}
+                            <div className="pt-1"><strong className="text-amber-200">7.</strong> After adding, click the button below to connect!</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Material UI design Google Sign In button */}
-                  <button 
-                    id="btn-connect-google-sheets"
-                    onClick={handleConnectGoogleSheets}
-                    className="w-full bg-emerald-700 hover:bg-emerald-600 active:scale-[0.99] text-white py-2.5 px-4 rounded-xl text-xs font-bold transition duration-200 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 border border-emerald-500/20 cursor-pointer"
-                  >
-                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                      <path d="M21.35 11.1H12v2.7h5.38c-.24 1.28-.96 2.37-2.07 3.12v2.6h3.33c1.94-1.78 3.06-4.4 3.06-7.52 0-.6-.05-1.2-.15-1.7z" fill="#ffffff" />
-                      <path d="M12 21c2.43 0 4.47-.8 5.96-2.18l-3.33-2.6c-.92.62-2.1.98-3.63.98-2.79 0-5.15-1.89-6-4.42H1.54v2.7C3.02 18.52 7.21 21 12 21z" fill="#34A853" />
-                      <path d="M6 12.78a5.9 5.9 0 0 1 0-3.56V6.52H1.54a11.98 11.98 0 0 0 0 10.96L6 12.78z" fill="#FBBC05" />
-                      <path d="M12 5.75c1.32 0 2.5.45 3.44 1.35l2.58-2.58C16.46 3.06 14.43 2.25 12 2.25c-4.79 0-8.98 2.48-10.46 6.13L6 11.1c.85-2.53 3.21-4.42 6-4.42z" fill="#EA4335" />
-                    </svg>
-                    Deploy Google Sheets Database
-                  </button>
+                  {/* Material UI design action buttons layout */}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button 
+                      id="btn-connect-google-sheets"
+                      onClick={handleConnectGoogleSheets}
+                      className="flex-grow bg-emerald-700 hover:bg-emerald-600 active:scale-[0.99] text-white py-2.5 px-4 rounded-xl text-xs font-bold transition duration-200 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 border border-emerald-500/20 cursor-pointer"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M21.35 11.1H12v2.7h5.38c-.24 1.28-.96 2.37-2.07 3.12v2.6h3.33c1.94-1.78 3.06-4.4 3.06-7.52 0-.6-.05-1.2-.15-1.7z" fill="#ffffff" />
+                        <path d="M12 21c2.43 0 4.47-.8 5.96-2.18l-3.33-2.6c-.92.62-2.1.98-3.63.98-2.79 0-5.15-1.89-6-4.42H1.54v2.7C3.02 18.52 7.21 21 12 21z" fill="#34A853" />
+                        <path d="M6 12.78a5.9 5.9 0 0 1 0-3.56V6.52H1.54a11.98 11.98 0 0 0 0 10.96L6 12.78z" fill="#FBBC05" />
+                        <path d="M12 5.75c1.32 0 2.5.45 3.44 1.35l2.58-2.58C16.46 3.06 14.43 2.25 12 2.25c-4.79 0-8.98 2.48-10.46 6.13L6 11.1c.85-2.53 3.21-4.42 6-4.42z" fill="#EA4335" />
+                      </svg>
+                      {sheetsSyncStatus === 'error' ? 'Retry Integration Setup' : 'Deploy Google Sheets Database'}
+                    </button>
+
+                    {sheetsSyncStatus === 'error' && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await logoutFromGoogleSheets();
+                          } catch (e) {
+                            console.error(e);
+                          }
+                          setSheetsUser(null);
+                          setSheetsToken(null);
+                          setSheetsSpreadsheetId(null);
+                          setSheetsSpreadsheetUrl(null);
+                          setSheetsSyncStatus('disabled');
+                        }}
+                        className="bg-rose-950/45 hover:bg-rose-900 border border-rose-900/30 text-rose-350 py-2.5 px-4 rounded-xl text-xs font-bold transition cursor-pointer"
+                      >
+                        Disconnect / Reset
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3.5 animate-fade-in">

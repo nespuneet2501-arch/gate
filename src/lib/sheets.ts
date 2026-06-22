@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, signInWithPopup, GoogleAuthProvider, 
-  onAuthStateChanged, User, signOut 
+  onAuthStateChanged, User, signOut
 } from 'firebase/auth';
 import { 
   Student, PickupRequest, SecurityLog, AppNotification, EmailLog 
@@ -16,6 +16,10 @@ const provider = new GoogleAuthProvider();
 // Required scopes for Google Drive and Google Sheets APIs
 provider.addScope('https://www.googleapis.com/auth/drive.file');
 provider.addScope('https://www.googleapis.com/auth/spreadsheets');
+// Force consent prompt to ensure user sees and can check the optional permission checkboxes
+provider.setCustomParameters({
+  prompt: 'consent'
+});
 
 let cachedAccessToken: string | null = null;
 let isSigningIn = false;
@@ -40,13 +44,8 @@ export const initSheetsAuth = (
   onAuthFailure: () => void
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
-    if (user) {
-      if (cachedAccessToken) {
-        onAuthSuccess(user, cachedAccessToken);
-      } else {
-        // If logged in but token is not in-memory, we can try to retrieve it or require sign-in
-        onAuthFailure();
-      }
+    if (user && cachedAccessToken) {
+      onAuthSuccess(user, cachedAccessToken);
     } else {
       cachedAccessToken = null;
       onAuthFailure();
@@ -117,13 +116,50 @@ export const createSpreadsheetWithTables = async (token: string): Promise<{ id: 
         headers: { Authorization: `Bearer ${token}` }
       });
       if (verifyRes.ok) {
+        const spreadsheetInfo = await verifyRes.json();
+        const existingSheets = spreadsheetInfo.sheets || [];
+        const existingTitles = new Set(existingSheets.map((s: any) => s.properties?.title).filter(Boolean));
+        
+        // Find if any required sheet in our schema is missing from this spreadsheet
+        const missingSheets = Object.keys(TABLE_SCHEMAS).filter(title => !existingTitles.has(title));
+        
+        if (missingSheets.length > 0) {
+          console.log(`Auto-healing spreadsheet ${cachedId}. Creating missing sheets:`, missingSheets);
+          
+          const requests = missingSheets.map(title => ({
+            addSheet: {
+              properties: { title }
+            }
+          }));
+
+          const updateRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cachedId}:batchUpdate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ requests })
+          });
+
+          if (updateRes.ok) {
+            // Write headers for the newly created sheets
+            for (const title of missingSheets) {
+              const headers = (TABLE_SCHEMAS as any)[title];
+              await writeSheetData(token, cachedId, title, [headers]);
+            }
+          } else {
+            console.error("Failed to auto-heal spreadsheet sheets. Creating a fresh sheet instead.");
+            throw new Error("Spreadsheet missing sheets could not be repaired.");
+          }
+        }
+
         return {
           id: cachedId,
           url: `https://docs.google.com/spreadsheets/d/${cachedId}/edit`
         };
       }
-    } catch {
-      console.log("Cached Spreadsheet not verified or accessible, creating a new one.");
+    } catch (err) {
+      console.log("Cached Spreadsheet not verified, incomplete, or inaccessible. Creating a new one.", err);
     }
   }
 
@@ -197,8 +233,15 @@ export const writeSheetData = async (
   );
 
   if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error("Access forbidden. Please ensure you checked are granted Google Sheets and Google Drive permissions during the Google login prompt.");
+    }
+    if (res.status === 401) {
+      throw new Error("Session expired or unauthorized. Please disconnect and reconnect your Google Sheets account.");
+    }
     const errorText = await res.text();
     console.error(`Error writing sheet data for ${sheetName}:`, errorText);
+    throw new Error(`Failed to write to Google Sheets (${res.status}): ${errorText}`);
   }
 };
 
@@ -216,12 +259,24 @@ export const readSheetData = async (
         headers: { Authorization: `Bearer ${token}` }
       }
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (res.status === 403) {
+        throw new Error("Access forbidden. Please ensure you checked and granted Google Sheets and Google Drive permissions during the Google login prompt.");
+      }
+      if (res.status === 401) {
+        throw new Error("Session expired or unauthorized. Please disconnect and reconnect your Google Sheets account.");
+      }
+      if (res.status === 404) {
+        throw new Error("Database spreadsheet not found. It may have been moved or deleted.");
+      }
+      const text = await res.text();
+      throw new Error(`Google Sheets API Error (${res.status}): ${text || res.statusText}`);
+    }
     const data = await res.json();
     return data.values || null;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Failed to read sheet data for ${sheetName}:`, error);
-    return null;
+    throw error;
   }
 };
 

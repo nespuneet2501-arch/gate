@@ -35,8 +35,8 @@ export default function AdminPanel({
   supabaseErrorMsg = '',
   supabaseLoading = false
 }: AdminPanelProps) {
-  // Tabs: 'students' | 'logs' | 'new_pickups' | 'supabase' | 'config'
-  const [activeSubTab, setActiveSubTab] = useState<'students' | 'logs' | 'new_pickups' | 'supabase' | 'config'>('students');
+  // Tabs: 'students' | 'logs' | 'new_pickups' | 'config'
+  const [activeSubTab, setActiveSubTab] = useState<'students' | 'logs' | 'new_pickups' | 'config'>('students');
   const [sqlCopied, setSqlCopied] = useState(false);
 
   // Administrative credential change state management
@@ -399,22 +399,7 @@ export default function AdminPanel({
             </span>
           )}
         </button>
-        <button
-          id="tab-supabase"
-          onClick={() => { setActiveSubTab('supabase'); }}
-          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-medium text-sm transition-all whitespace-nowrap ${
-            activeSubTab === 'supabase' 
-              ? 'border-emerald-600 text-emerald-700 font-semibold' 
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Database size={16} />
-          <span>Supabase Integration</span>
-          {supabaseStatus === 'connected' && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
-          {supabaseStatus === 'tables_missing' && <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />}
-          {supabaseStatus === 'error' && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />}
-          {supabaseStatus === 'disabled' && <span className="w-2 h-2 rounded-full bg-slate-400" />}
-        </button>
+
         <button
           id="tab-config"
           onClick={() => { setActiveSubTab('config'); }}
@@ -1248,142 +1233,6 @@ export default function AdminPanel({
               })
             )}
           </div>
-        </div>
-      )}
-
-      {/* Supabase Cloud Sync & Integration Configuration Desk */}
-      {activeSubTab === 'supabase' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-6">
-          
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-            <div className="space-y-1">
-              <h3 className="font-display font-black text-slate-950 flex items-center gap-2 text-sm uppercase tracking-wider">
-                <CloudLightning className="text-blue-600 animate-pulse" size={18} />
-                Supabase Server Synchronization
-              </h3>
-              <p className="text-xs text-slate-500">
-                Plug-and-play cloud database. This state engine supports dual-mode: local fallback and true cloud storage.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-400 font-bold">Status:</span>
-              {supabaseStatus === 'connected' ? (
-                <span className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-extrabold px-3 py-1 rounded-md">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  ACTIVE CLOUD SYNC
-                </span>
-              ) : supabaseStatus === 'tables_missing' ? (
-                <span className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-extrabold px-3 py-1 rounded-md">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                  CONNECTED (TABLES MISSING)
-                </span>
-              ) : supabaseStatus === 'error' ? (
-                <span className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 text-rose-800 text-[10px] font-extrabold px-3 py-1 rounded-md">
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                  AUTHENTICATION ERROR
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-extrabold px-3 py-1 rounded-md">
-                  <span className="w-2 h-2 rounded-full bg-slate-400" />
-                  OFFLINE (LOCAL STORAGE)
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Status-specific warning messages */}
-          {supabaseStatus === 'tables_missing' && (
-            <div className="bg-amber-50/70 border border-amber-200/60 p-4 rounded-xl flex items-start gap-3 w-full">
-              <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1 text-xs">
-                <h4 className="font-bold text-amber-900">Database Connection Confirmed, but Tables are Missing!</h4>
-                <p className="text-amber-800 leading-relaxed font-medium">
-                  Supabase URL & API Keys are valid, but we couldn't find the necessary structures. To automatically create the required tables and insert default seed demographics, simply **click the copy button below**, paste the query in your **Supabase SQL Editor**, and click **Run**. That's all!
-                </p>
-              </div>
-            </div>
-          )}
-
-          {supabaseStatus === 'error' && (
-            <div className="bg-rose-50/70 border border-rose-200/60 p-4 rounded-xl flex items-start gap-3 w-full">
-              <AlertCircle size={18} className="text-rose-600 shrink-0 mt-0.5" />
-              <div className="space-y-1 text-xs">
-                <h4 className="font-bold text-rose-900">Supabase API Connection Unsuccessful</h4>
-                <p className="text-rose-800 leading-relaxed font-medium">
-                  We failed to establish a handshake with Supabase. Check that your credentials are valid. Error details: <code className="font-mono bg-rose-100 px-1 py-0.5 rounded text-rose-700">{supabaseErrorMsg}</code>
-                </p>
-              </div>
-            </div>
-          )}
-
-          {supabaseStatus === 'disabled' && (
-            <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl space-y-2 text-xs w-full">
-              <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                <AlertCircle size={14} className="text-slate-500" />
-                How do I connect this application to my private Supabase server?
-              </h4>
-              <p className="text-slate-600 leading-relaxed font-medium">
-                We design with real integration in mind. To connect your school app to any active Supabase database, follow these steps:
-              </p>
-              <ol className="list-decimal pl-4.5 space-y-1.5 text-slate-500 font-medium leading-relaxed">
-                <li>Create a free project at <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">supabase.com</a>.</li>
-                <li>Go to **Settings** → **API** to copy your **Project URL** and **Anon Key**.</li>
-                <li>Add them as secrets or env variables in the **Vite Settings** panel:
-                  <ul className="list-disc pl-4.5 mt-1 text-[11px] space-y-0.5 font-mono text-slate-700 bg-slate-100/65 py-1 px-2.5 rounded border border-slate-200/55 w-fit">
-                    <li>VITE_SUPABASE_URL = <span className="text-slate-400">"your-project-url"</span></li>
-                    <li>VITE_SUPABASE_ANON_KEY = <span className="text-slate-400">"your-anon-role-key"</span></li>
-                  </ul>
-                </li>
-                <li>Once saved, this applet automatically bypasses LocalStorage and syncs your smart dispersal directory in real-time!</li>
-              </ol>
-            </div>
-          )}
-
-          {/* Automate Table Creation Section */}
-          <div className="border border-slate-200/70 rounded-xl overflow-hidden shadow-2xs">
-            <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Database size={15} className="text-slate-700" />
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Automate Table Setup Script</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
-                  setSqlCopied(true);
-                  setTimeout(() => setSqlCopied(false), 2000);
-                }}
-                className={`flex items-center gap-1.5 text-[10px] font-black border px-3 py-1 rounded-md transition-all uppercase tracking-wide cursor-pointer select-none active:scale-95 ${
-                  sqlCopied 
-                    ? 'bg-emerald-600 border-emerald-600 text-white' 
-                    : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700'
-                }`}
-              >
-                {sqlCopied ? (
-                  <>
-                    <Check size={12} />
-                    COPIED SCHEMA!
-                  </>
-                ) : (
-                  <>
-                    <Copy size={12} />
-                    COPY SETUP SQL
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div className="p-4 bg-slate-950 text-slate-300 text-[10.5px] font-mono leading-relaxed max-h-[300px] overflow-y-auto select-all">
-              <div className="text-amber-400 select-all font-bold">// Copy-paste this setup script into your Supabase SQL Editor:</div>
-              <pre className="mt-2 text-slate-350 select-all select-text selection:bg-amber-500 selection:text-slate-950">{SUPABASE_SQL_SCHEMA}</pre>
-            </div>
-            
-            <div className="bg-white px-4 py-3 border-t border-slate-100 text-[11px] text-slate-500 font-medium font-semibold">
-              💡 <strong>Security Note:</strong> This script defines 5 tables with standard column types matching the application data structure exactly, disables restrictive Row Level Security (RLS) for easy sandboxing development, and pre-inserts Aarav & Rhea Sharma as default demo student credentials.
-            </div>
-          </div>
-
         </div>
       )}
 
