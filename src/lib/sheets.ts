@@ -353,21 +353,22 @@ export const studentToRow = (student: Student) => {
 };
 
 export const rowToStudent = (row: any[]): Student => {
+  const r = Array.isArray(row) ? row : [];
   return {
-    id: String(row[0] || ''),
-    admissionNumber: String(row[1] || ''),
-    name: String(row[2] || ''),
-    className: String(row[3] || ''),
-    section: String(row[4] || ''),
-    dob: String(row[5] || ''),
-    address: String(row[6] || ''),
+    id: String(r[0] || ''),
+    admissionNumber: String(r[1] || ''),
+    name: String(r[2] || ''),
+    className: String(r[3] || ''),
+    section: String(r[4] || ''),
+    dob: String(r[5] || ''),
+    address: String(r[6] || ''),
     photo: '', // Base Mock SVG fallback used locally
-    fatherName: String(row[7] || ''),
-    motherName: String(row[8] || ''),
-    fatherEmail: String(row[9] || ''),
-    motherEmail: String(row[10] || ''),
-    fatherMobile: String(row[11] || ''),
-    motherMobile: String(row[12] || ''),
+    fatherName: String(r[7] || ''),
+    motherName: String(r[8] || ''),
+    fatherEmail: String(r[9] || ''),
+    motherEmail: String(r[10] || ''),
+    fatherMobile: String(r[11] || ''),
+    motherMobile: String(r[12] || ''),
     fatherPhoto: '',
     motherPhoto: ''
   };
@@ -402,29 +403,30 @@ export const requestToRow = (req: PickupRequest) => {
 };
 
 export const rowToRequest = (row: any[]): PickupRequest => {
+  const r = Array.isArray(row) ? row : [];
   return {
-    id: String(row[0] || ''),
-    studentId: String(row[1] || ''),
-    fullName: String(row[2] || ''),
-    age: Number(row[3] || 0),
-    mobileNumber: String(row[4] || ''),
-    email: String(row[5] || ''),
-    otpCode: String(row[6] || ''),
-    relationship: String(row[7] || ''),
-    photograph: String(row[8] || ''),
-    aadhaarNumber: String(row[9] || ''),
-    aadhaarPhoto: String(row[10] || ''),
-    notes: String(row[11] || ''),
-    status: (row[12] || 'pending') as any,
-    createdAt: String(row[13] || ''),
-    approvedAt: row[14] ? String(row[14]) : undefined,
-    verificationCode: row[15] ? String(row[15]) : undefined,
-    codeExpiresAt: row[16] ? String(row[16]) : undefined,
-    isUsed: String(row[17]).toUpperCase() === 'TRUE',
-    adminApproval: row[18] ? (row[18] as any) : undefined,
-    approvedByRole: row[19] ? (row[19] as any) : undefined,
-    approvedByName: row[20] ? String(row[20]) : undefined,
-    adminVerificationTime: row[21] ? String(row[21]) : undefined
+    id: String(r[0] || ''),
+    studentId: String(r[1] || ''),
+    fullName: String(r[2] || ''),
+    age: Number(r[3] || 0),
+    mobileNumber: String(r[4] || ''),
+    email: String(r[5] || ''),
+    otpCode: String(r[6] || ''),
+    relationship: String(r[7] || ''),
+    photograph: String(r[8] || ''),
+    aadhaarNumber: String(r[9] || ''),
+    aadhaarPhoto: String(r[10] || ''),
+    notes: String(r[11] || ''),
+    status: (r[12] || 'pending') as any,
+    createdAt: String(r[13] || ''),
+    approvedAt: r[14] ? String(r[14]) : undefined,
+    verificationCode: r[15] ? String(r[15]) : undefined,
+    codeExpiresAt: r[16] ? String(r[16]) : undefined,
+    isUsed: String(r[17] || '').toUpperCase() === 'TRUE',
+    adminApproval: r[18] ? (r[18] as any) : undefined,
+    approvedByRole: r[19] ? (r[19] as any) : undefined,
+    approvedByName: r[20] ? String(r[20]) : undefined,
+    adminVerificationTime: r[21] ? String(r[21]) : undefined
   };
 };
 
@@ -448,20 +450,21 @@ export const logToRow = (l: SecurityLog) => {
 };
 
 export const rowToLog = (row: any[]): SecurityLog => {
+  const r = Array.isArray(row) ? row : [];
   return {
-    id: String(row[0] || ''),
-    pickupTime: String(row[1] || ''),
-    studentId: String(row[2] || ''),
-    studentName: String(row[3] || ''),
-    className: String(row[4] || ''),
-    section: String(row[5] || ''),
-    pickupPersonName: String(row[6] || ''),
-    relationship: String(row[7] || ''),
-    gateNumber: String(row[8] || ''),
-    securityStaffName: String(row[9] || ''),
-    verificationMethod: (row[10] || 'QR Scan') as any,
-    status: (row[11] || 'AUTHORIZED') as any,
-    pickupPersonPhoto: String(row[12] || '')
+    id: String(r[0] || ''),
+    pickupTime: String(r[1] || ''),
+    studentId: String(r[2] || ''),
+    studentName: String(r[3] || ''),
+    className: String(r[4] || ''),
+    section: String(r[5] || ''),
+    pickupPersonName: String(r[6] || ''),
+    relationship: String(r[7] || ''),
+    gateNumber: String(r[8] || ''),
+    securityStaffName: String(r[9] || ''),
+    verificationMethod: (r[10] || 'QR Scan') as any,
+    status: (r[11] || 'AUTHORIZED') as any,
+    pickupPersonPhoto: String(r[12] || '')
   };
 };
 
@@ -479,14 +482,15 @@ export const notificationToRow = (n: AppNotification) => {
 };
 
 export const rowToNotification = (row: any[]): AppNotification => {
+  const r = Array.isArray(row) ? row : [];
   return {
-    id: String(row[0] || ''),
-    title: String(row[1] || ''),
-    body: String(row[2] || ''),
-    timestamp: String(row[3] || ''),
-    studentId: row[4] ? String(row[4]) : undefined,
-    type: (row[5] || 'system') as any,
-    isRead: String(row[6]).toUpperCase() === 'TRUE'
+    id: String(r[0] || ''),
+    title: String(r[1] || ''),
+    body: String(r[2] || ''),
+    timestamp: String(r[3] || ''),
+    studentId: r[4] ? String(r[4]) : undefined,
+    type: (r[5] || 'system') as any,
+    isRead: String(r[6] || '').toUpperCase() === 'TRUE'
   };
 };
 
@@ -502,11 +506,12 @@ export const emailToRow = (e: EmailLog) => {
 };
 
 export const rowToEmail = (row: any[]): EmailLog => {
+  const r = Array.isArray(row) ? row : [];
   return {
-    id: String(row[0] || ''),
-    to: String(row[1] || ''),
-    subject: String(row[2] || ''),
-    body: String(row[3] || ''),
-    timestamp: String(row[4] || '')
+    id: String(r[0] || ''),
+    to: String(r[1] || ''),
+    subject: String(r[2] || ''),
+    body: String(r[3] || ''),
+    timestamp: String(r[4] || '')
   };
 };

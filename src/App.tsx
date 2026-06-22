@@ -109,72 +109,92 @@ export default function App() {
 
       if (savedStudents) {
         const parsed = JSON.parse(savedStudents);
-        const containsAnkit = parsed.some((s: any) => s.name === "Ankit Goel" || s.name === "Ankit");
-        if (!containsAnkit) {
-          const ankitObj = initialStudents.find(s => s.name === "Ankit Goel" || s.id === "STU3004");
-          if (ankitObj) parsed.push(ankitObj);
+        if (Array.isArray(parsed)) {
+          const containsAnkit = parsed.some((s: any) => s && (s.name === "Ankit Goel" || s.name === "Ankit"));
+          if (!containsAnkit) {
+            const ankitObj = initialStudents.find(s => s.name === "Ankit Goel" || s.id === "STU3004");
+            if (ankitObj) parsed.push(ankitObj);
+          }
+          setStudents(parsed);
+        } else {
+          setStudents(initialStudents);
         }
-        setStudents(parsed);
       } else {
         setStudents(initialStudents);
       }
 
       if (savedRequests) {
         const reqs = JSON.parse(savedRequests);
-        const seenReqs = new Set<string>();
-        const uniqueReqs = reqs.map((req: any, index: number) => {
-          if (!req.id || seenReqs.has(req.id)) {
-            req.id = `REQ_${Date.now()}_${index}_${Math.floor(Math.random() * 1000000)}`;
-          }
-          seenReqs.add(req.id);
-          return req;
-        });
-        setPickupRequests(uniqueReqs);
+        if (Array.isArray(reqs)) {
+          const seenReqs = new Set<string>();
+          const uniqueReqs = reqs.map((req: any, index: number) => {
+            if (!req.id || seenReqs.has(req.id)) {
+              req.id = `REQ_${Date.now()}_${index}_${Math.floor(Math.random() * 1000000)}`;
+            }
+            seenReqs.add(req.id);
+            return req;
+          });
+          setPickupRequests(uniqueReqs);
+        } else {
+          setPickupRequests(initialPickupRequests);
+        }
       } else {
         setPickupRequests(initialPickupRequests);
       }
 
       if (savedLogs) {
         const logs = JSON.parse(savedLogs);
-        const seenLogs = new Set<string>();
-        const uniqueLogs = logs.map((log: any, index: number) => {
-          if (!log.id || seenLogs.has(log.id)) {
-            log.id = `LOG_${Date.now()}_${index}_${Math.floor(Math.random() * 1000000)}`;
-          }
-          seenLogs.add(log.id);
-          return log;
-        });
-        setSecurityLogs(uniqueLogs);
+        if (Array.isArray(logs)) {
+          const seenLogs = new Set<string>();
+          const uniqueLogs = logs.map((log: any, index: number) => {
+            if (!log.id || seenLogs.has(log.id)) {
+              log.id = `LOG_${Date.now()}_${index}_${Math.floor(Math.random() * 1000000)}`;
+            }
+            seenLogs.add(log.id);
+            return log;
+          });
+          setSecurityLogs(uniqueLogs);
+        } else {
+          setSecurityLogs(initialSecurityLogs);
+        }
       } else {
         setSecurityLogs(initialSecurityLogs);
       }
 
       if (savedNotifs) {
         const notifs = JSON.parse(savedNotifs);
-        const seenNotifs = new Set<string>();
-        const uniqueNotifs = notifs.map((notif: any, index: number) => {
-          if (!notif.id || seenNotifs.has(notif.id)) {
-            notif.id = `NOTIF_${Date.now()}_${index}_${Math.floor(Math.random() * 1000000)}`;
-          }
-          seenNotifs.add(notif.id);
-          return notif;
-        });
-        setNotifications(uniqueNotifs);
+        if (Array.isArray(notifs)) {
+          const seenNotifs = new Set<string>();
+          const uniqueNotifs = notifs.map((notif: any, index: number) => {
+            if (!notif.id || seenNotifs.has(notif.id)) {
+              notif.id = `NOTIF_${Date.now()}_${index}_${Math.floor(Math.random() * 1000000)}`;
+            }
+            seenNotifs.add(notif.id);
+            return notif;
+          });
+          setNotifications(uniqueNotifs);
+        } else {
+          setNotifications(initialNotifications);
+        }
       } else {
         setNotifications(initialNotifications);
       }
 
       if (savedEmails) {
         const emails = JSON.parse(savedEmails);
-        const seenEmails = new Set<string>();
-        const uniqueEmails = emails.map((email: any, index: number) => {
-          if (!email.id || seenEmails.has(email.id)) {
-            email.id = `EML_${Date.now()}_${index}_${Math.floor(Math.random() * 1000000)}`;
-          }
-          seenEmails.add(email.id);
-          return email;
-        });
-        setEmailLogs(uniqueEmails);
+        if (Array.isArray(emails)) {
+          const seenEmails = new Set<string>();
+          const uniqueEmails = emails.map((email: any, index: number) => {
+            if (!email.id || seenEmails.has(email.id)) {
+              email.id = `EML_${Date.now()}_${index}_${Math.floor(Math.random() * 1000000)}`;
+            }
+            seenEmails.add(email.id);
+            return email;
+          });
+          setEmailLogs(uniqueEmails);
+        } else {
+          setEmailLogs(initialEmailLogs);
+        }
       } else {
         setEmailLogs(initialEmailLogs);
       }
@@ -1225,9 +1245,8 @@ export default function App() {
                       {/* Google Sheets Scope Permissions Guide */}
                       {(sheetsErrorMsg.toLowerCase().includes('forbidden') || 
                         sheetsErrorMsg.toLowerCase().includes('permission') || 
-                        sheetsErrorMsg.toLowerCase().includes('access') ||
                         sheetsErrorMsg.toLowerCase().includes('scope') || 
-                        sheetsErrorMsg.toLowerCase().includes('unauthorized')) && (
+                        (sheetsErrorMsg.toLowerCase().includes('unauthorized') && !sheetsErrorMsg.toLowerCase().includes('domain'))) && (
                         <div className="bg-slate-950 border border-emerald-500/20 rounded-xl p-3.5 space-y-2.5 text-[11px] text-slate-300">
                           <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider text-[9.5px]">
                             <Database size={12} className="text-emerald-440" />
@@ -1257,25 +1276,25 @@ export default function App() {
                         <div className="bg-slate-950 border border-amber-500/20 rounded-xl p-4 space-y-3 text-[11px] text-slate-300">
                           <div className="flex items-center gap-1.5 text-amber-400 font-bold uppercase tracking-wider text-[10px]">
                             <Database size={13} className="text-amber-400" />
-                            🔑 Google OAuth Domain Authorized Access Setup
+                            🔑 Firebase authorized Domain Setup (Vercel Fix)
                           </div>
                           
                           <p className="text-slate-400 leading-relaxed text-[10.5px]">
-                            Google authentication runs inside secure developer preview iframes, which require authorizing this domain for popup authentication.
+                            Google/Firebase Auth requires you to authorize your deployment domain path to permit Google popup login flows on new web servers.
                           </p>
 
-                          <div className="bg-slate-900 border border-slate-800 p-3 rounded-lg space-y-2 text-[10px] text-slate-300">
-                            <span className="text-[9.5px] uppercase font-bold tracking-wider text-rose-400 block font-mono">🔒 Secure Workspace Access</span>
+                          <div className="bg-slate-900 border border-slate-800 p-3 rounded-lg space-y-1.5 text-[10px] text-slate-300">
+                            <span className="text-[9.5px] uppercase font-bold tracking-wider text-rose-450 block font-mono">⚡ No-Code Alternative (Run Anywhere)</span>
                             <p className="text-slate-400 leading-relaxed">
-                              Configure the optional variables (e.g., <code className="bg-slate-950 px-1 text-slate-200">VITE_FIREBASE_API_KEY</code>, etc.) in your environment secrets to use your personal Firebase Google Sign-In console.
+                              If you don't need real-time multi-device cloud synchronization, click <strong className="text-rose-400">Disconnect / Reset</strong> below. The application will run entirely in high-performance local database sandbox mode, persisting your records locally on any device instantly with zero errors!
                             </p>
                           </div>
 
                           <div className="space-y-3 pt-1">
-                            <div className="bg-emerald-950/20 border border-emerald-500/10 p-3 rounded-lg space-y-1.5">
-                              <span className="text-[10.5px] font-bold text-emerald-400 block">Deploy to your own Google Cloud & Sheets Project</span>
+                            <div className="bg-emerald-950/25 border border-emerald-500/10 p-3 rounded-lg space-y-1.5">
+                              <span className="text-[10.5px] font-bold text-emerald-400 block">Or, Whitelist this Domain on Firebase:</span>
                               <p className="text-slate-300 text-[10px] leading-relaxed">
-                                Enter your Google Auth app details. Inside your project, click <strong>Authentication &gt; Settings &gt; Authorized Domains</strong>, and add this copied preview domain:
+                                Open your <strong>Firebase Console</strong> project settings under <strong>Authentication &gt; Settings &gt; Authorized Domains</strong>, click <strong>Add Domain</strong>, and paste the domain below:
                               </p>
                               
                               <div className="flex items-center gap-1 mt-1 font-mono">
@@ -1283,7 +1302,7 @@ export default function App() {
                                   type="text" 
                                   readOnly 
                                   value={window.location.hostname} 
-                                  className="bg-slate-950 text-emerald-400 text-[10px] p-1.5 px-2 rounded-lg border border-slate-800 flex-grow select-all focus:outline-none"
+                                  className="bg-slate-950 text-emerald-400 text-[10px] p-1.5 px-2 rounded-lg border border-slate-800 flex-grow select-all focus:outline-none font-semibold"
                                 />
                                 <button 
                                   onClick={() => {
