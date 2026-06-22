@@ -64,6 +64,17 @@ export default function App() {
   });
   const [sheetsErrorMsg, setSheetsErrorMsg] = useState<string>('');
 
+  const [databaseMode, setDatabaseMode] = useState<'local' | 'sheets'>(() => {
+    const savedMode = localStorage.getItem('goenka_database_mode');
+    if (savedMode === 'local' || savedMode === 'sheets') return savedMode;
+    const hasSpreadsheet = !!localStorage.getItem('goenka_sheets_spreadsheet_id');
+    return hasSpreadsheet ? 'sheets' : 'local';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('goenka_database_mode', databaseMode);
+  }, [databaseMode]);
+
   // Dynamic status bar time state
   const [androidTime, setAndroidTime] = useState('09:41 AM');
 
@@ -210,6 +221,8 @@ export default function App() {
 
   // Google Sheets Authentication Listener on Mount
   useEffect(() => {
+    if (databaseMode !== 'sheets') return;
+
     const unsubscribe = initSheetsAuth(
       async (user, token) => {
         setSheetsUser(user);
@@ -264,7 +277,7 @@ export default function App() {
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [databaseMode]);
 
   // Automatic setup of Google Sheets Database & Bootstrap Tables
   const handleConnectGoogleSheets = async () => {
@@ -1211,230 +1224,297 @@ export default function App() {
                 </div>
                 
                 {/* Status light */}
-                {sheetsSyncStatus === 'disabled' && (
-                  <span className="text-[9px] bg-slate-950 text-slate-500 border border-slate-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                    ● Offline
+                {databaseMode === 'local' ? (
+                  <span className="text-[9px] bg-emerald-950/40 text-emerald-450 border border-emerald-900/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                    LOCAL ACTIVE
                   </span>
-                )}
-                {sheetsSyncStatus === 'error' && (
-                  sheetsErrorMsg.toLowerCase().includes('domain') || sheetsErrorMsg.toLowerCase().includes('unauthorized-domain') ? (
-                    <span className="text-[9px] bg-slate-950/70 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-black uppercase tracking-wider flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" />
-                      LOCAL SANDBOX
-                    </span>
-                  ) : (
-                    <span className="text-[9px] bg-rose-950/40 text-rose-400 border border-rose-900/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                      ● Sync Error
-                    </span>
-                  )
-                )}
-                {sheetsSyncStatus === 'syncing' && (
-                  <span className="text-[9px] bg-amber-950/40 text-amber-400 border border-amber-900/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
-                    Syncing...
-                  </span>
-                )}
-                {(sheetsSyncStatus === 'connected' || sheetsSyncStatus === 'synced') && (
-                  <span className="text-[9px] bg-emerald-950/40 text-emerald-400 border border-emerald-900/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                    Auto-Synced
-                  </span>
+                ) : (
+                  <>
+                    {sheetsSyncStatus === 'disabled' && (
+                      <span className="text-[9px] bg-slate-950 text-slate-500 border border-slate-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                        ● Offline
+                      </span>
+                    )}
+                    {sheetsSyncStatus === 'error' && (
+                      sheetsErrorMsg.toLowerCase().includes('domain') || sheetsErrorMsg.toLowerCase().includes('unauthorized-domain') ? (
+                        <span className="text-[9px] bg-slate-950/70 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-black uppercase tracking-wider flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" />
+                          LOCAL SANDBOX
+                        </span>
+                      ) : (
+                        <span className="text-[9px] bg-rose-950/40 text-rose-400 border border-rose-900/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                          ● Sync Error
+                        </span>
+                      )
+                    )}
+                    {sheetsSyncStatus === 'syncing' && (
+                      <span className="text-[9px] bg-amber-950/40 text-amber-400 border border-amber-900/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
+                        Syncing...
+                      </span>
+                    )}
+                    {(sheetsSyncStatus === 'connected' || sheetsSyncStatus === 'synced') && (
+                      <span className="text-[9px] bg-emerald-950/40 text-emerald-400 border border-emerald-900/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                        Auto-Synced
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
 
-              {sheetsSyncStatus === 'disabled' || sheetsSyncStatus === 'error' ? (
-                <div className="space-y-4">
-                  <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
-                    Link Goenka Dispersal System directly to Google Sheets to automatically synchronize student records & parent gate-passes instantly from the cloud.
+              {/* Database Mode Switcher Selector */}
+              <div id="db-mode-selector" className="grid grid-cols-2 bg-slate-950 p-1 rounded-xl border border-slate-850/80 mb-4 text-center select-none">
+                <button
+                  id="btn-mode-local"
+                  onClick={() => setDatabaseMode('local')}
+                  className={`py-1.5 px-3 rounded-lg text-[10.5px] font-bold transition-all duration-150 cursor-pointer ${
+                    databaseMode === 'local' 
+                      ? 'bg-emerald-950/30 text-emerald-450 shadow-sm border border-emerald-800/15' 
+                      : 'text-slate-450 hover:text-slate-205'
+                  }`}
+                >
+                  🔒 Local Secure Sandbox
+                </button>
+                <button
+                  id="btn-mode-sheets"
+                  onClick={() => setDatabaseMode('sheets')}
+                  className={`py-1.5 px-3 rounded-lg text-[10.5px] font-bold transition-all duration-150 cursor-pointer ${
+                    databaseMode === 'sheets' 
+                      ? 'bg-emerald-950/30 text-emerald-450 shadow-sm border border-emerald-800/15' 
+                      : 'text-slate-450 hover:text-slate-205'
+                  }`}
+                >
+                  📊 Google Sheets Sync
+                </button>
+              </div>
+
+              {databaseMode === 'local' ? (
+                <div className="space-y-3.5 animate-fade-in text-[11px] text-slate-350">
+                  <div className="bg-emerald-950/10 border border-emerald-500/10 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-emerald-400">
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full inline-block animate-pulse" />
+                      Client Sandbox Engine Live
+                    </div>
+                    <p className="leading-relaxed text-[10.5px] text-slate-400">
+                      The school gateway portal has successfully booted with its **High-Performance Client Database Engine**. All student, pickup request, OTP dispersal, and delegate records save instantly to your device secure local database sandbox with pristine execution speed and 100% offline uptime!
+                    </p>
+                    
+                    <div className="space-y-1.5 pt-2.5 border-t border-slate-800/50">
+                      <div className="flex items-center gap-2 text-[10.5px] text-slate-300">
+                        <span className="text-emerald-400 font-bold">✓</span> Real-Time Offline Operations Active
+                      </div>
+                      <div className="flex items-center gap-2 text-[10.5px] text-slate-300">
+                        <span className="text-emerald-400 font-bold">✓</span> Stored Securely in Browser Cache
+                      </div>
+                      <div className="flex items-center gap-2 text-[10.5px] text-slate-300">
+                        <span className="text-emerald-400 font-bold">✓</span> Ready for Vercel/Static Deployments
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-slate-500 leading-normal bg-slate-950/40 p-3 rounded-xl border border-slate-850/60 leading-normal">
+                    💡 If you need to synchronise records across multiple dynamic devices, tap <strong>Google Sheets Sync</strong> in the switcher above to link your cloud spreadsheet!
                   </p>
-                  
-                  {sheetsSyncStatus === 'error' && (
-                    <div className="space-y-3 animate-fade-in">
-                      {sheetsErrorMsg.toLowerCase().includes('domain') || sheetsErrorMsg.toLowerCase().includes('unauthorized-domain') ? (
-                        <div className="bg-amber-950/20 border border-amber-500/25 rounded-xl p-3.5 space-y-2 text-[11px] text-amber-200">
-                          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] text-amber-400">
-                            🛡️ Firebase Sandboxed Environment Active
-                          </div>
-                          <p className="text-slate-350 leading-relaxed text-[10.5px]">
-                            Since the app is running on a custom deployment environment (<code className="bg-slate-900 px-1 text-slate-200 font-semibold">{window.location.hostname}</code>) outside of the authorized development environment, Google popup authentication is restricted by Firebase domain security properties.
-                          </p>
-                          <div className="bg-emerald-950/30 border border-emerald-500/10 p-2.5 rounded-lg text-emerald-300 font-medium text-[10.5px] leading-relaxed">
-                            💡 <strong>Sandbox Engine Activated:</strong> The school gate portal has gracefully activated the **High-Performance Local Database**. All dispersals, delegate approvals, OTPs, notifications, and logs are 100% active, saving instantly to your device local database sandbox with pristine execution!
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="bg-rose-950/40 border border-rose-900/40 rounded-xl p-3 text-[10px] text-rose-300 font-mono leading-normal">
-                          ⚠️ Message: {sheetsErrorMsg}
-                        </div>
-                      )}
-
-                      {/* Google Sheets Scope Permissions Guide */}
-                      {(sheetsErrorMsg.toLowerCase().includes('forbidden') || 
-                        sheetsErrorMsg.toLowerCase().includes('permission') || 
-                        sheetsErrorMsg.toLowerCase().includes('scope') || 
-                        (sheetsErrorMsg.toLowerCase().includes('unauthorized') && !sheetsErrorMsg.toLowerCase().includes('domain'))) && (
-                        <div className="bg-slate-950 border border-emerald-500/20 rounded-xl p-3.5 space-y-2.5 text-[11px] text-slate-300">
-                          <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider text-[9.5px]">
-                            <Database size={12} className="text-emerald-440" />
-                            📝 Google Drive & Sheets Permission Fix
-                          </div>
-                          <p className="text-slate-400 leading-relaxed text-[10.5px]">
-                            Google requires you to explicitly grant the app permission to modify files and sheets in your Drive.
-                          </p>
-                          <div className="space-y-1.5 text-slate-300 text-[10.5px] font-medium leading-normal bg-slate-900/50 p-2.5 rounded-lg border border-slate-850">
-                            <div><strong className="text-emerald-300">1.</strong> Click the red <strong className="text-rose-350">Disconnect / Reset</strong> button below.</div>
-                            <div><strong className="text-emerald-300">2.</strong> Click <strong className="text-emerald-400">Deploy Google Sheets Database</strong> to sign in.</div>
-                            <div><strong className="text-emerald-300">3.</strong> In the Google login screen, <strong className="text-emerald-300">MAKE SURE TO TICK/CHECK</strong> both optional permission boxes:</div>
-                            <ul className="list-disc list-inside pl-1 text-[9.5px] text-slate-400 space-y-0.5 leading-normal">
-                              <li>"See, edit, create, and delete all your Google Sheets spreadsheets"</li>
-                              <li>"See, edit, create, and delete only the specific Google Drive files..."</li>
-                            </ul>
-                            <div className="pt-1"><strong className="text-emerald-300">4.</strong> Click <strong className="text-slate-200">Continue</strong> and your databases will link instantly!</div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Firebase Domain Whitelist Guide */}
-                      {(sheetsErrorMsg.toLowerCase().includes('unauthorized-domain') || 
-                        sheetsErrorMsg.toLowerCase().includes('unauthorized domain') || 
-                        sheetsErrorMsg.toLowerCase().includes('domain') ||
-                        sheetsErrorMsg.toLowerCase().includes('popup')) && (
-                        <div className="bg-slate-950 border border-amber-500/20 rounded-xl p-4 space-y-3 text-[11px] text-slate-300">
-                          <div className="flex items-center gap-1.5 text-amber-400 font-bold uppercase tracking-wider text-[10px]">
-                            <Database size={13} className="text-amber-400" />
-                            🔑 Firebase authorized Domain Setup (Vercel Fix)
-                          </div>
-                          
-                          <p className="text-slate-400 leading-relaxed text-[10.5px]">
-                            Google/Firebase Auth requires you to authorize your deployment domain path to permit Google popup login flows on new web servers.
-                          </p>
-
-                          <div className="bg-slate-900 border border-slate-800 p-3 rounded-lg space-y-1.5 text-[10px] text-slate-300">
-                            <span className="text-[9.5px] uppercase font-bold tracking-wider text-rose-450 block font-mono">⚡ No-Code Alternative (Run Anywhere)</span>
-                            <p className="text-slate-400 leading-relaxed">
-                              If you don't need real-time multi-device cloud synchronization, click <strong className="text-rose-400">Disconnect / Reset</strong> below. The application will run entirely in high-performance local database sandbox mode, persisting your records locally on any device instantly with zero errors!
+                </div>
+              ) : (
+                /* Google Sheets Mode */
+                sheetsSyncStatus === 'disabled' || sheetsSyncStatus === 'error' ? (
+                  <div className="space-y-4">
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
+                      Link Goenka Dispersal System directly to Google Sheets to automatically synchronize student records & parent gate-passes instantly from the cloud.
+                    </p>
+                    
+                    {sheetsSyncStatus === 'error' && (
+                      <div className="space-y-3 animate-fade-in">
+                        {sheetsErrorMsg.toLowerCase().includes('domain') || sheetsErrorMsg.toLowerCase().includes('unauthorized-domain') ? (
+                          <div className="bg-amber-950/20 border border-amber-500/25 rounded-xl p-3.5 space-y-2 text-[11px] text-amber-200">
+                            <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] text-amber-400">
+                              🛡️ Firebase Sandboxed Environment Active
+                            </div>
+                            <p className="text-slate-350 leading-relaxed text-[10.5px]">
+                              Since the app is running on a custom deployment environment (<code className="bg-slate-900 px-1 text-slate-200 font-semibold">{window.location.hostname}</code>) outside of the authorized development environment, Google popup authentication is restricted by Firebase domain security properties.
                             </p>
+                            <div className="bg-emerald-950/30 border border-emerald-500/10 p-2.5 rounded-lg text-emerald-300 font-medium text-[10.5px] leading-relaxed">
+                              💡 <strong>Sandbox Engine Activated:</strong> The school gate portal has gracefully activated the **High-Performance Local Database**. All dispersals, delegate approvals, OTPs, notifications, and logs are 100% active, saving instantly to your device local database sandbox with pristine execution!
+                            </div>
                           </div>
+                        ) : (
+                          <div className="bg-rose-950/40 border border-rose-900/40 rounded-xl p-3 text-[10px] text-rose-300 font-mono leading-normal">
+                            ⚠️ Message: {sheetsErrorMsg}
+                          </div>
+                        )}
 
-                          <div className="space-y-3 pt-1">
-                            <div className="bg-emerald-950/25 border border-emerald-500/10 p-3 rounded-lg space-y-1.5">
-                              <span className="text-[10.5px] font-bold text-emerald-400 block">Or, Whitelist this Domain on Firebase:</span>
-                              <p className="text-slate-300 text-[10px] leading-relaxed">
-                                Open your <strong>Firebase Console</strong> project settings under <strong>Authentication &gt; Settings &gt; Authorized Domains</strong>, click <strong>Add Domain</strong>, and paste the domain below:
+                        {/* Google Sheets Scope Permissions Guide */}
+                        {(sheetsErrorMsg.toLowerCase().includes('forbidden') || 
+                          sheetsErrorMsg.toLowerCase().includes('permission') || 
+                          sheetsErrorMsg.toLowerCase().includes('scope') || 
+                          (sheetsErrorMsg.toLowerCase().includes('unauthorized') && !sheetsErrorMsg.toLowerCase().includes('domain'))) && (
+                          <div className="bg-slate-950 border border-emerald-500/20 rounded-xl p-3.5 space-y-2.5 text-[11px] text-slate-300">
+                            <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider text-[9.5px]">
+                              <Database size={12} className="text-emerald-440" />
+                              📝 Google Drive & Sheets Permission Fix
+                            </div>
+                            <p className="text-slate-400 leading-relaxed text-[10.5px]">
+                              Google requires you to explicitly grant the app permission to modify files and sheets in your Drive.
+                            </p>
+                            <div className="space-y-1.5 text-slate-300 text-[10.5px] font-medium leading-normal bg-slate-900/50 p-2.5 rounded-lg border border-slate-850">
+                              <div><strong className="text-emerald-300">1.</strong> Click the red <strong className="text-rose-350">Disconnect / Reset</strong> button below.</div>
+                              <div><strong className="text-emerald-300">2.</strong> Click <strong className="text-emerald-400">Deploy Google Sheets Database</strong> to sign in.</div>
+                              <div><strong className="text-emerald-300">3.</strong> In the Google login screen, <strong className="text-emerald-300">MAKE SURE TO TICK/CHECK</strong> both optional permission boxes:</div>
+                              <ul className="list-disc list-inside pl-1 text-[9.5px] text-slate-400 space-y-0.5 leading-normal">
+                                <li>"See, edit, create, and delete all your Google Sheets spreadsheets"</li>
+                                <li>"See, edit, create, and delete only the specific Google Drive files..."</li>
+                              </ul>
+                              <div className="pt-1"><strong className="text-emerald-300">4.</strong> Click <strong className="text-slate-200">Continue</strong> and your databases will link instantly!</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Firebase Domain Whitelist Guide */}
+                        {(sheetsErrorMsg.toLowerCase().includes('unauthorized-domain') || 
+                          sheetsErrorMsg.toLowerCase().includes('unauthorized domain') || 
+                          sheetsErrorMsg.toLowerCase().includes('domain') ||
+                          sheetsErrorMsg.toLowerCase().includes('popup')) && (
+                          <div className="bg-slate-950 border border-amber-500/20 rounded-xl p-4 space-y-3 text-[11px] text-slate-300">
+                            <div className="flex items-center gap-1.5 text-amber-400 font-bold uppercase tracking-wider text-[10px]">
+                              <Database size={13} className="text-amber-400" />
+                              🔑 Firebase Authorized Domain Setup (Vercel Fix)
+                            </div>
+                            
+                            <p className="text-slate-400 leading-relaxed text-[10.5px]">
+                              Google/Firebase Auth requires you to authorize your deployment domain path to permit Google popup login flows on new web servers.
+                            </p>
+
+                            <div className="bg-slate-900 border border-slate-800 p-3 rounded-lg space-y-1.5 text-[10px] text-slate-300">
+                              <span className="text-[9.5px] uppercase font-bold tracking-wider text-rose-450 block font-mono">⚡ No-Code Alternative (Run Anywhere)</span>
+                              <p className="text-slate-400 leading-relaxed">
+                                If you don't need real-time multi-device cloud synchronization, choose <strong className="text-emerald-400">🔒 Local Secure Sandbox</strong> in the switcher above. The application will run entirely in high-performance local database sandbox mode, persisting your records locally on any device instantly with zero errors!
                               </p>
-                              
-                              <div className="flex items-center gap-1 mt-1 font-mono">
-                                <input 
-                                  type="text" 
-                                  readOnly 
-                                  value={window.location.hostname} 
-                                  className="bg-slate-950 text-emerald-400 text-[10px] p-1.5 px-2 rounded-lg border border-slate-800 flex-grow select-all focus:outline-none font-semibold"
-                                />
-                                <button 
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(window.location.hostname);
-                                    alert("Domain copied to clipboard!");
-                                  }}
-                                  className="bg-emerald-800 text-white hover:bg-emerald-700 p-1.5 px-2.5 rounded-lg font-bold text-[9px] uppercase tracking-wider cursor-pointer active:scale-95 transition"
-                                >
-                                  Copy
-                                </button>
+                            </div>
+
+                            <div className="space-y-3 pt-1">
+                              <div className="bg-emerald-950/25 border border-emerald-500/10 p-3 rounded-lg space-y-1.5">
+                                <span className="text-[10.5px] font-bold text-emerald-400 block">Or, Whitelist this Domain on Firebase:</span>
+                                <p className="text-slate-300 text-[10px] leading-relaxed">
+                                  Open your <strong>Firebase Console</strong> project settings under <strong>Authentication &gt; Settings &gt; Authorized Domains</strong>, click <strong>Add Domain</strong>, and paste the domain below:
+                                </p>
+                                
+                                <div className="flex items-center gap-1 mt-1 font-mono">
+                                  <input 
+                                    type="text" 
+                                    readOnly 
+                                    value={window.location.hostname} 
+                                    className="bg-slate-950 text-emerald-400 text-[10px] p-1.5 px-2 rounded-lg border border-slate-800 flex-grow select-all focus:outline-none font-semibold"
+                                  />
+                                  <button 
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(window.location.hostname);
+                                      alert("Domain copied to clipboard!");
+                                    }}
+                                    className="bg-emerald-800 text-white hover:bg-emerald-700 p-1.5 px-2.5 rounded-lg font-bold text-[9px] uppercase tracking-wider cursor-pointer active:scale-95 transition"
+                                  >
+                                    Copy
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Material UI design action buttons layout */}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button 
+                        id="btn-connect-google-sheets"
+                        onClick={handleConnectGoogleSheets}
+                        className="flex-grow bg-emerald-700 hover:bg-emerald-600 active:scale-[0.99] text-white py-2.5 px-4 rounded-xl text-xs font-bold transition duration-200 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 border border-emerald-500/20 cursor-pointer"
+                      >
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                          <path d="M21.35 11.1H12v2.7h5.38c-.24 1.28-.96 2.37-2.07 3.12v2.6h3.33c1.94-1.78 3.06-4.4 3.06-7.52 0-.6-.05-1.2-.15-1.7z" fill="#ffffff" />
+                          <path d="M12 21c2.43 0 4.47-.8 5.96-2.18l-3.33-2.6c-.92.62-2.1.98-3.63.98-2.79 0-5.15-1.89-6-4.42H1.54v2.7C3.02 18.52 7.21 21 12 21z" fill="#34A853" />
+                          <path d="M6 12.78a5.9 5.9 0 0 1 0-3.56V6.52H1.54a11.98 11.98 0 0 0 0 10.96L6 12.78z" fill="#FBBC05" />
+                          <path d="M12 5.75c1.32 0 2.5.45 3.44 1.35l2.58-2.58C16.46 3.06 14.43 2.25 12 2.25c-4.79 0-8.98 2.48-10.46 6.13L6 11.1c.85-2.53 3.21-4.42 6-4.42z" fill="#EA4335" />
+                        </svg>
+                        {sheetsSyncStatus === 'error' ? 'Retry Integration Setup' : 'Deploy Google Sheets Database'}
+                      </button>
+
+                      {sheetsSyncStatus === 'error' && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await logoutFromGoogleSheets();
+                            } catch (e) {
+                              console.error(e);
+                            }
+                            setSheetsUser(null);
+                            setSheetsToken(null);
+                            setSheetsSpreadsheetId(null);
+                            setSheetsSpreadsheetUrl(null);
+                            setSheetsSyncStatus('disabled');
+                            setDatabaseMode('local');
+                          }}
+                          className="bg-rose-950/45 hover:bg-rose-900 border border-rose-900/30 text-rose-350 py-2.5 px-4 rounded-xl text-xs font-bold transition cursor-pointer"
+                        >
+                          Disconnect / Reset
+                        </button>
                       )}
                     </div>
-                  )}
+                  </div>
+                ) : (
+                  <div className="space-y-3.5 animate-fade-in">
+                    <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex flex-col gap-1.5">
+                      <span className="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold block">CONNECTED STORAGE</span>
+                      <span className="text-xs font-bold text-slate-250 truncate block">
+                        📁 {sheetsUser?.email || 'Authenticated Account'}
+                      </span>
+                      
+                      {sheetsSpreadsheetUrl && (
+                        <a 
+                          href={sheetsSpreadsheetUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-[10.5px] text-emerald-450 hover:text-emerald-350 font-black inline-flex items-center gap-1 w-fit border-b border-dashed border-emerald-500/50 hover:border-emerald-450 pb-0.5 mt-1"
+                        >
+                          <Link2 size={11} /> Open spreadsheet database ↗
+                        </a>
+                      )}
+                    </div>
 
-                  {/* Material UI design action buttons layout */}
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <button 
-                      id="btn-connect-google-sheets"
-                      onClick={handleConnectGoogleSheets}
-                      className="flex-grow bg-emerald-700 hover:bg-emerald-600 active:scale-[0.99] text-white py-2.5 px-4 rounded-xl text-xs font-bold transition duration-200 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 border border-emerald-500/20 cursor-pointer"
-                    >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                        <path d="M21.35 11.1H12v2.7h5.38c-.24 1.28-.96 2.37-2.07 3.12v2.6h3.33c1.94-1.78 3.06-4.4 3.06-7.52 0-.6-.05-1.2-.15-1.7z" fill="#ffffff" />
-                        <path d="M12 21c2.43 0 4.47-.8 5.96-2.18l-3.33-2.6c-.92.62-2.1.98-3.63.98-2.79 0-5.15-1.89-6-4.42H1.54v2.7C3.02 18.52 7.21 21 12 21z" fill="#34A853" />
-                        <path d="M6 12.78a5.9 5.9 0 0 1 0-3.56V6.52H1.54a11.98 11.98 0 0 0 0 10.96L6 12.78z" fill="#FBBC05" />
-                        <path d="M12 5.75c1.32 0 2.5.45 3.44 1.35l2.58-2.58C16.46 3.06 14.43 2.25 12 2.25c-4.79 0-8.98 2.48-10.46 6.13L6 11.1c.85-2.53 3.21-4.42 6-4.42z" fill="#EA4335" />
-                      </svg>
-                      {sheetsSyncStatus === 'error' ? 'Retry Integration Setup' : 'Deploy Google Sheets Database'}
-                    </button>
+                    {/* Schema active markers */}
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold block">SYNCED TABLES CONTROLLER</span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {['Students', 'PickupRequests', 'SecurityLogs', 'Notifications', 'EmailLogs'].map((n) => (
+                          <div key={n} className="bg-slate-950/45 p-2 rounded-lg border border-slate-850 flex items-center justify-between text-[10.5px]">
+                            <span className="text-slate-300 font-mono">{n}</span>
+                            <span className="text-[9.5px] text-emerald-400 font-bold">Active</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-                    {sheetsSyncStatus === 'error' && (
+                    {/* Force sync */}
+                    <div className="flex gap-2 pt-1">
                       <button
-                        onClick={async () => {
-                          try {
-                            await logoutFromGoogleSheets();
-                          } catch (e) {
-                            console.error(e);
-                          }
-                          setSheetsUser(null);
-                          setSheetsToken(null);
-                          setSheetsSpreadsheetId(null);
-                          setSheetsSpreadsheetUrl(null);
-                          setSheetsSyncStatus('disabled');
-                        }}
-                        className="bg-rose-950/45 hover:bg-rose-900 border border-rose-900/30 text-rose-350 py-2.5 px-4 rounded-xl text-xs font-bold transition cursor-pointer"
+                        id="btn-force-sheets-sync"
+                        onClick={handleForceSheetsSync}
+                        className="flex-grow bg-slate-850 hover:bg-slate-800 text-slate-200 py-2.5 rounded-xl text-[10.5px] font-black tracking-widest uppercase transition flex items-center justify-center gap-1.5 border border-slate-700/50 cursor-pointer"
                       >
-                        Disconnect / Reset
+                        ⚡ Force Sync Database
                       </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3.5 animate-fade-in">
-                  <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex flex-col gap-1.5">
-                    <span className="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold block">CONNECTED STORAGE</span>
-                    <span className="text-xs font-bold text-slate-250 truncate block">
-                      📁 {sheetsUser?.email || 'Authenticated Account'}
-                    </span>
-                    
-                    {sheetsSpreadsheetUrl && (
-                      <a 
-                        href={sheetsSpreadsheetUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-[10.5px] text-emerald-450 hover:text-emerald-350 font-black inline-flex items-center gap-1 w-fit border-b border-dashed border-emerald-500/50 hover:border-emerald-450 pb-0.5 mt-1"
+                      <button
+                        id="btn-disconnect-sheets"
+                        onClick={handleDisconnectGoogleSheets}
+                        className="bg-rose-950/40 hover:bg-rose-900/60 border border-rose-905 text-rose-350 py-2 px-3 rounded-xl text-[10.5px] font-bold transition cursor-pointer"
                       >
-                        <Link2 size={11} /> Open spreadsheet database ↗
-                      </a>
-                    )}
-                  </div>
-
-                  {/* Schema active markers */}
-                  <div className="space-y-1.5">
-                    <span className="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold block">SYNCED TABLES CONTROLLER</span>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {['Students', 'PickupRequests', 'SecurityLogs', 'Notifications', 'EmailLogs'].map((n) => (
-                        <div key={n} className="bg-slate-950/45 p-2 rounded-lg border border-slate-850 flex items-center justify-between text-[10.5px]">
-                          <span className="text-slate-300 font-mono">{n}</span>
-                          <span className="text-[9.5px] text-emerald-400 font-bold">Active</span>
-                        </div>
-                      ))}
+                        Disconnect
+                      </button>
                     </div>
                   </div>
-
-                  {/* Force sync */}
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      id="btn-force-sheets-sync"
-                      onClick={handleForceSheetsSync}
-                      className="flex-grow bg-slate-850 hover:bg-slate-800 text-slate-200 py-2.5 rounded-xl text-[10.5px] font-black tracking-widest uppercase transition flex items-center justify-center gap-1.5 border border-slate-700/50 cursor-pointer"
-                    >
-                      ⚡ Force Sync Database
-                    </button>
-                    <button
-                      id="btn-disconnect-sheets"
-                      onClick={handleDisconnectGoogleSheets}
-                      className="bg-rose-950/40 hover:bg-rose-900/60 border border-rose-905 text-rose-350 py-2 px-3 rounded-xl text-[10.5px] font-bold transition cursor-pointer"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                </div>
+                )
               )}
             </div>
 
