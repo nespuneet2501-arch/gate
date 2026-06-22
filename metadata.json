@@ -1,0 +1,6 @@
+{
+  "name": "GOENKA Smart Dispersal",
+  "description": "A secure, simple, and fast Student Pickup Verification System for schools using QR scanning and automatic verification.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
