@@ -35,9 +35,28 @@ export default function AdminPanel({
   supabaseErrorMsg = '',
   supabaseLoading = false
 }: AdminPanelProps) {
-  // Tabs: 'students' | 'logs' | 'new_pickups' | 'supabase'
-  const [activeSubTab, setActiveSubTab] = useState<'students' | 'logs' | 'new_pickups' | 'supabase'>('students');
+  // Tabs: 'students' | 'logs' | 'new_pickups' | 'supabase' | 'config'
+  const [activeSubTab, setActiveSubTab] = useState<'students' | 'logs' | 'new_pickups' | 'supabase' | 'config'>('students');
   const [sqlCopied, setSqlCopied] = useState(false);
+
+  // Administrative credential change state management
+  const [adminUsername, setAdminUsername] = useState(localStorage.getItem('goenka_principal_username') || 'admin');
+  const [adminPassword, setAdminPassword] = useState(localStorage.getItem('goenka_principal_password') || 'admin123');
+  const [teacherUsername, setTeacherUsername] = useState(localStorage.getItem('goenka_teacher_username') || 'teacher');
+  const [teacherPassword, setTeacherPassword] = useState(localStorage.getItem('goenka_teacher_password') || 'teacher123');
+  const [configSuccess, setConfigSuccess] = useState('');
+
+  // Save new administrative credential pairs to persistent LocalStorage
+  const handleSaveStaffCredentials = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('goenka_principal_username', adminUsername.trim());
+    localStorage.setItem('goenka_principal_password', adminPassword);
+    localStorage.setItem('goenka_teacher_username', teacherUsername.trim());
+    localStorage.setItem('goenka_teacher_password', teacherPassword);
+    setConfigSuccess('Principal & Advisor portal passwords updated successfully!');
+    addNotification("Staff Security Updated", "Faculty gatekeeper portal login credentials and security salt values modified successfully.", "system");
+    setTimeout(() => setConfigSuccess(''), 4000);
+  };
 
   const handleAdminClearance = (reqId: string, action: 'approved' | 'rejected') => {
     const generatedOtp = Math.floor(100000 + Math.random() * 901500).toString(); // e.g. "821503"
@@ -395,6 +414,18 @@ export default function AdminPanel({
           {supabaseStatus === 'tables_missing' && <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />}
           {supabaseStatus === 'error' && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />}
           {supabaseStatus === 'disabled' && <span className="w-2 h-2 rounded-full bg-slate-400" />}
+        </button>
+        <button
+          id="tab-config"
+          onClick={() => { setActiveSubTab('config'); }}
+          className={`flex items-center gap-2 px-5 py-3 border-b-2 font-medium text-sm transition-all whitespace-nowrap ${
+            activeSubTab === 'config' 
+              ? 'border-emerald-600 text-emerald-700 font-semibold' 
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <User size={16} />
+          <span>Config & Password Settings</span>
         </button>
       </div>
 
@@ -1348,11 +1379,100 @@ export default function AdminPanel({
               <pre className="mt-2 text-slate-350 select-all select-text selection:bg-amber-500 selection:text-slate-950">{SUPABASE_SQL_SCHEMA}</pre>
             </div>
             
-            <div className="bg-white px-4 py-3 border-t border-slate-100 text-[11px] text-slate-500 font-medium">
+            <div className="bg-white px-4 py-3 border-t border-slate-100 text-[11px] text-slate-500 font-medium font-semibold">
               💡 <strong>Security Note:</strong> This script defines 5 tables with standard column types matching the application data structure exactly, disables restrictive Row Level Security (RLS) for easy sandboxing development, and pre-inserts Aarav & Rhea Sharma as default demo student credentials.
             </div>
           </div>
 
+        </div>
+      )}
+
+      {activeSubTab === 'config' && (
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm max-w-2xl animate-fade-in space-y-6">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Portal Security & Credentials Config</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Configure and change the system usernames and passwords for Faculty Administration (Principal and Teachers).
+            </p>
+          </div>
+
+          <form onSubmit={handleSaveStaffCredentials} className="space-y-5">
+            {configSuccess && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-850 p-3.5 rounded-lg text-xs font-semibold flex items-center gap-2">
+                <CheckCircle size={15} className="shrink-0 text-emerald-600" />
+                <span>{configSuccess}</span>
+              </div>
+            )}
+
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-widest border-b border-slate-200 pb-1.5 flex items-center gap-1.5 font-mono text-[#0b3294]">
+                👑 Principal Account Credentials
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Username</label>
+                  <input 
+                    type="text"
+                    required
+                    value={adminUsername}
+                    onChange={(e) => setAdminUsername(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-white border border-slate-250 rounded-lg font-mono focus:outline-none focus:border-[#0b3294] mt-1"
+                    placeholder="admin"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Password</label>
+                  <input 
+                    type="text"
+                    required
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-white border border-slate-250 rounded-lg font-mono focus:outline-none focus:border-[#0b3294] mt-1"
+                    placeholder="admin123"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-widest border-b border-slate-200 pb-1.5 flex items-center gap-1.5 font-mono text-[#0b3294]">
+                🏫 Teacher / Advisor Account Credentials
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Username</label>
+                  <input 
+                    type="text"
+                    required
+                    value={teacherUsername}
+                    onChange={(e) => setTeacherUsername(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-white border border-slate-250 rounded-lg font-mono focus:outline-none focus:border-[#0b3294] mt-1"
+                    placeholder="teacher"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Password</label>
+                  <input 
+                    type="text"
+                    required
+                    value={teacherPassword}
+                    onChange={(e) => setTeacherPassword(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-white border border-slate-250 rounded-lg font-mono focus:outline-none focus:border-[#0b3294] mt-1"
+                    placeholder="teacher123"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                type="submit"
+                className="bg-[#0b3294] hover:bg-[#0b3294]/85 hover:scale-[1.01] active:scale-[0.99] text-white px-6 py-2.5 rounded-xl text-xs font-bold transition duration-300 shadow-sm cursor-pointer uppercase tracking-wider"
+              >
+                Save Staff Credentials
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

@@ -35,6 +35,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'staff' | 'parent' | 'gate'>('staff');
   const [loggedInRole, setLoggedInRole] = useState<'principal' | 'teacher' | 'parent' | 'gate' | null>(null);
 
+  // New auth states
+  const [loggedInParentStudentId, setLoggedInParentStudentId] = useState<string | null>(null);
+  const [loginUsername, setLoginUsername] = useState('admin');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [staffLoginType, setStaffLoginType] = useState<'principal' | 'teacher'>('principal');
+
   // Core reactive data states
   const [students, setStudents] = useState<Student[]>([]);
   const [pickupRequests, setPickupRequests] = useState<PickupRequest[]>([]);
@@ -489,6 +496,74 @@ export default function App() {
     }
   };
 
+  // Authenticate user login credentials across roles
+  const handleRoleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+
+    if (activeTab === 'staff') {
+      if (staffLoginType === 'principal') {
+        const expectedUser = localStorage.getItem('goenka_principal_username') || 'admin';
+        const expectedPass = localStorage.getItem('goenka_principal_password') || 'admin123';
+        if (loginUsername.trim() === expectedUser && loginPassword === expectedPass) {
+          setLoggedInRole('principal');
+          setLoginUsername('');
+          setLoginPassword('');
+        } else {
+          setLoginError('Invalid Principal username or password.');
+        }
+      } else {
+        const expectedUser = localStorage.getItem('goenka_teacher_username') || 'teacher';
+        const expectedPass = localStorage.getItem('goenka_teacher_password') || 'teacher123';
+        if (loginUsername.trim() === expectedUser && loginPassword === expectedPass) {
+          setLoggedInRole('teacher');
+          setLoginUsername('');
+          setLoginPassword('');
+        } else {
+          setLoginError('Invalid Teacher username or password.');
+        }
+      }
+    } else if (activeTab === 'parent') {
+      // Find student by admission number (case-insensitive)
+      const matchedStudent = students.find(
+        s => s.admissionNumber.trim().toLowerCase() === loginUsername.trim().toLowerCase()
+      );
+      if (!matchedStudent) {
+        setLoginError('No matching student with this Admission Number.');
+        return;
+      }
+
+      // Check passwords
+      let savedPasswordsMap: Record<string, string> = {};
+      try {
+        const storedStr = localStorage.getItem('goenka_parent_passwords');
+        if (storedStr) {
+          savedPasswordsMap = JSON.parse(storedStr);
+        }
+      } catch (err) {}
+      const expectedPass = savedPasswordsMap[matchedStudent.admissionNumber] || 'student123';
+
+      if (loginPassword === expectedPass) {
+        setLoggedInParentStudentId(matchedStudent.id);
+        setLoggedInRole('parent');
+        setLoginUsername('');
+        setLoginPassword('');
+      } else {
+        setLoginError('Incorrect password. Default is student123.');
+      }
+    } else if (activeTab === 'gate') {
+      const expectedUser = 'gate';
+      const expectedPass = 'gate123';
+      if (loginUsername.trim() === expectedUser && loginPassword === expectedPass) {
+        setLoggedInRole('gate');
+        setLoginUsername('');
+        setLoginPassword('');
+      } else {
+        setLoginError('Invalid Gate Guard username or password.');
+      }
+    }
+  };
+
   // Dispersal stats metrics
   const totalStudents = students.length;
   // Dispersals completed today (June 17 or current date logs)
@@ -559,6 +634,10 @@ export default function App() {
               onClick={() => {
                 setActiveTab('staff');
                 setActiveRole('admin');
+                setStaffLoginType('principal');
+                setLoginUsername('admin');
+                setLoginPassword('');
+                setLoginError('');
               }}
               className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'staff' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent'}`}
             >
@@ -571,6 +650,9 @@ export default function App() {
               onClick={() => {
                 setActiveTab('parent');
                 setActiveRole('parent');
+                setLoginUsername('');
+                setLoginPassword('');
+                setLoginError('');
               }}
               className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'parent' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent'}`}
             >
@@ -583,6 +665,9 @@ export default function App() {
               onClick={() => {
                 setActiveTab('gate');
                 setActiveRole('security');
+                setLoginUsername('gate');
+                setLoginPassword('');
+                setLoginError('');
               }}
               className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'gate' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent'}`}
             >
@@ -600,160 +685,222 @@ export default function App() {
 
             {/* UN-AUTHENTICATED ACCESS CONTROL PANELS (FIRST LOGIN VIEW SELECTIONS) */}
             {activeTab === 'staff' && loggedInRole !== 'principal' && loggedInRole !== 'teacher' && (
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in shadow-[#0b3294]/5">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#0b3294]/10 rounded-full blur-3xl pointer-events-none" />
                 
-                <div className="text-center max-w-xl mx-auto mb-8">
+                <div className="text-center max-w-xl mx-auto mb-6">
                   <div className="bg-[#0b3294]/35 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3.5 border border-[#fbdf7e]/20 text-[#fbdf7e]">
                     <GraduationCap size={24} />
                   </div>
-                  <h3 className="text-lg md:text-xl font-bold text-slate-100 tracking-tight">Faculty & Administration Gateway</h3>
+                  <h3 className="text-lg md:text-xl font-bold text-slate-100 tracking-tight">
+                    {staffLoginType === 'principal' ? 'GD Goenka Principal Console' : 'Faculty Advisor Workspace'}
+                  </h3>
                   <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                    Verify credentials, review security delegate clearance checklists, and manage Google Sheets background tables. Select your authorized profile category:
+                    Verify credentials to access administrative systems, student rosters, and database integrations.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* PRINCIPAL INTERACTIVE OPTION CARD */}
-                  <button 
-                    onClick={() => {
-                      setLoggedInRole('principal'); 
-                      setActiveRole('admin');
-                    }}
-                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg flex flex-col justify-between h-48 cursor-pointer"
-                  >
-                    <div>
-                      <div className="bg-amber-400/10 text-amber-400 p-2 rounded-xl w-fit group-hover:bg-amber-400/20 transition-colors mb-4">
-                        <Key size={18} />
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-amber-300 transition-colors">Dr. R. K. Goenka</h4>
-                      <p className="text-[11px] text-slate-400 mt-1 font-semibold">School Principal</p>
-                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Full clearance authorization privileges, pupil registry, security logs & cloud database synchronization.</p>
+                <form onSubmit={handleRoleLogin} className="max-w-md mx-auto bg-slate-950/40 p-6 rounded-2xl border border-slate-800 space-y-4">
+                  {loginError && (
+                    <div className="bg-rose-950/45 border border-rose-900/30 text-rose-350 p-3 rounded-xl text-xs font-semibold flex items-center gap-2">
+                      <AlertCircle size={14} className="shrink-0" />
+                      <span>{loginError}</span>
                     </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                      {staffLoginType === 'principal' ? 'Principal Username' : 'Advisor Username'}
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-900/90 border border-slate-850 rounded-xl focus:border-amber-400/50 text-slate-100 focus:outline-none font-mono"
+                      placeholder={staffLoginType === 'principal' ? 'e.g. admin' : 'e.g. teacher'}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                      Password
+                    </label>
+                    <input 
+                      type="password"
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-900/90 border border-slate-850 rounded-xl focus:border-amber-400/50 text-slate-100 focus:outline-none font-mono"
+                      placeholder="••••••••"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-[#0b3294] hover:bg-[#0b3294]/85 active:scale-[0.99] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-[#fbdf7e]/20 cursor-pointer"
+                  >
+                    Authenticate {staffLoginType === 'principal' ? 'Principal' : 'Teacher'}
                   </button>
 
-                  {/* TEACHER INTERACTIVE OPTION CARD */}
-                  <button 
-                    onClick={() => {
-                      setLoggedInRole('teacher'); 
-                      setActiveRole('admin');
-                    }}
-                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg flex flex-col justify-between h-48 cursor-pointer"
-                  >
-                    <div>
-                      <div className="bg-teal-400/10 text-teal-400 p-2 rounded-xl w-fit group-hover:bg-teal-400/20 transition-colors mb-4">
-                        <Users size={18} />
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-teal-300 transition-colors">Class Advisor</h4>
-                      <p className="text-[11px] text-teal-400 mt-1 font-semibold">Senior Teacher Hub</p>
-                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">View linked pupil lists, update student directory, and analyze safe class dismissal logs.</p>
-                    </div>
-                  </button>
-                </div>
+                  <div className="text-center pt-2">
+                    {staffLoginType === 'principal' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStaffLoginType('teacher');
+                          setLoginUsername('teacher');
+                          setLoginPassword('');
+                          setLoginError('');
+                        }}
+                        className="text-[11px] text-slate-400 hover:text-[#fbdf7e] font-bold"
+                      >
+                        Are you a class teacher? Switch to Teacher Login →
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStaffLoginType('principal');
+                          setLoginUsername('admin');
+                          setLoginPassword('');
+                          setLoginError('');
+                        }}
+                        className="text-[11px] text-slate-400 hover:text-[#fbdf7e] font-bold"
+                      >
+                        ← Back to Principal Portal Login
+                      </button>
+                    )}
+                  </div>
+                </form>
               </div>
             )}
 
             {activeTab === 'parent' && loggedInRole !== 'parent' && (
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in shadow-emerald-950/5">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#0b3294]/10 rounded-full blur-3xl pointer-events-none" />
                 
-                <div className="text-center max-w-xl mx-auto mb-8">
+                <div className="text-center max-w-xl mx-auto mb-6">
                   <div className="bg-[#0b3294]/35 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3.5 border border-[#fbdf7e]/20 text-[#fbdf7e]">
                     <Smartphone size={24} />
                   </div>
-                  <h3 className="text-lg md:text-xl font-bold text-slate-100 tracking-tight">Parent / Sibling Access Hub</h3>
+                  <h3 className="text-lg md:text-xl font-bold text-slate-100 tracking-tight">Parent Digital Gateway Login</h3>
                   <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                    Check your child's schedule, coordinate safe pick-ups, authorize temporary guardians, and generate digital secure parent passport barcodes. Choose parent account:
+                    Check your child's schedule, coordinate safe pick-ups, authorize temp delegates, and scan digital barcodes.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button 
-                    onClick={() => {
-                      setLoggedInRole('parent'); 
-                      setActiveRole('parent');
-                    }}
-                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg h-44 flex flex-col justify-between cursor-pointer"
-                  >
-                    <div>
-                      <div className="bg-emerald-400/10 text-emerald-400 p-2 rounded-xl w-fit group-hover:bg-emerald-400/20 transition-colors mb-3.5">
-                        <User size={18} />
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-emerald-300 transition-colors">Mr. Ramesh Patel</h4>
-                      <p className="text-[11px] text-slate-400 mt-0.5 font-semibold">Father / Guardian of Kabir Patel</p>
-                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Connected student: Kabir Patel (Grade 2 - Section A). Digital Passcodes auto-synced.</p>
+                <form onSubmit={handleRoleLogin} className="max-w-md mx-auto bg-slate-950/40 p-6 rounded-2xl border border-slate-800 space-y-4">
+                  {loginError && (
+                    <div className="bg-rose-950/45 border border-rose-900/30 text-rose-350 p-3 rounded-xl text-xs font-semibold flex items-center gap-2">
+                      <AlertCircle size={14} className="shrink-0" />
+                      <span>{loginError}</span>
                     </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                      Child's Admission Number
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-900/90 border border-slate-850 rounded-xl focus:border-amber-400/50 text-slate-100 focus:outline-none font-mono uppercase"
+                      placeholder="e.g. ADM2026001"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                      Parent Password
+                    </label>
+                    <input 
+                      type="password"
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-900/90 border border-slate-850 rounded-xl focus:border-amber-400/50 text-slate-100 focus:outline-none font-mono"
+                      placeholder="••••••••"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-[#0b3294] hover:bg-[#0b3294]/85 active:scale-[0.99] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-[#fbdf7e]/20 cursor-pointer"
+                  >
+                    Authenticate Parent
                   </button>
 
-                  <button 
-                    onClick={() => {
-                      setLoggedInRole('parent'); 
-                      setActiveRole('parent');
-                    }}
-                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg h-44 flex flex-col justify-between cursor-pointer"
-                  >
-                    <div>
-                      <div className="bg-pink-400/10 text-pink-400 p-2 rounded-xl w-fit group-hover:bg-pink-400/20 transition-colors mb-3.5">
-                        <User size={18} />
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-pink-300 transition-colors">Mrs. Sunita Patel</h4>
-                      <p className="text-[11px] text-slate-400 mt-0.5 font-semibold">Mother / Guardian of Kabir Patel</p>
-                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Access instant parent safety cards, schedule delegate authorized approvals directly.</p>
-                    </div>
-                  </button>
-                </div>
+                  <div className="bg-slate-950/40 p-3.5 rounded-xl border border-slate-800 text-[10px] text-slate-400 leading-normal font-semibold">
+                    🔑 <strong className="text-[#fbdf7e]">First time login info:</strong> Enter your child's Admission Number (e.g., <span className="font-mono text-[#fbdf7e]">ADM2026001</span>) and the default password <span className="font-mono text-[#fbdf7e]">student123</span>. You can change your password inside the parent profile page after logging in.
+                  </div>
+                </form>
               </div>
             )}
 
             {activeTab === 'gate' && loggedInRole !== 'gate' && (
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in shadow-rose-950/5">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#0b3294]/10 rounded-full blur-3xl pointer-events-none" />
                 
-                <div className="text-center max-w-xl mx-auto mb-8">
+                <div className="text-center max-w-xl mx-auto mb-6">
                   <div className="bg-[#0b3294]/35 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3.5 border border-[#fbdf7e]/20 text-[#fbdf7e]">
                     <ShieldCheck size={24} />
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-slate-100 tracking-tight">Gate Dispersal Guard Terminal</h3>
                   <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                    Rugged tactical port for gate entry marshals. Instantly scan student barcode cards, log parent vehicle numbers, and verify clearance OTP certificates:
+                    Rugged tactical port for gate entry marshals. Instantly scan student barcode cards, log parent vehicle numbers, and verify clearance OTP certificates.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button 
-                    onClick={() => {
-                      setLoggedInRole('gate'); 
-                      setActiveRole('security');
-                    }}
-                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg h-44 flex flex-col justify-between cursor-pointer"
-                  >
-                    <div>
-                      <div className="bg-sky-400/10 text-sky-400 p-2 rounded-xl w-fit group-hover:bg-sky-400/20 transition-colors mb-3.5">
-                        <Shield size={18} />
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-sky-300 transition-colors">Officer Rajesh Singh</h4>
-                      <p className="text-[11px] text-slate-400 mt-0.5 font-semibold">Gate 1 Operator (Main Entrance)</p>
-                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Main bus turnaround area duty, equipped with live parent RFID tracking feed and Google Sheets sync.</p>
+                <form onSubmit={handleRoleLogin} className="max-w-md mx-auto bg-slate-950/40 p-6 rounded-2xl border border-slate-800 space-y-4">
+                  {loginError && (
+                    <div className="bg-rose-950/45 border border-rose-900/30 text-rose-350 p-3 rounded-xl text-xs font-semibold flex items-center gap-2">
+                      <AlertCircle size={14} className="shrink-0" />
+                      <span>{loginError}</span>
                     </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                      Gate Officer ID
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-900/90 border border-slate-850 rounded-xl focus:border-amber-400/50 text-slate-100 focus:outline-none font-mono"
+                      placeholder="e.g. gate"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                      Security Passcode
+                    </label>
+                    <input 
+                      type="password"
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      className="w-full text-xs p-3 bg-slate-900/90 border border-slate-850 rounded-xl focus:border-amber-400/50 text-slate-100 focus:outline-none font-mono"
+                      placeholder="••••••••"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-[#0b3294] hover:bg-[#0b3294]/85 active:scale-[0.99] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-[#fbdf7e]/20 cursor-pointer"
+                  >
+                    Authenticate Gate Marshall
                   </button>
 
-                  <button 
-                    onClick={() => {
-                      setLoggedInRole('gate'); 
-                      setActiveRole('security');
-                    }}
-                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg h-44 flex flex-col justify-between cursor-pointer"
-                  >
-                    <div>
-                      <div className="bg-purple-400/10 text-purple-400 p-2 rounded-xl w-fit group-hover:bg-purple-400/20 transition-colors mb-3.5">
-                        <Building size={18} />
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-purple-300 transition-colors">Officer Vikram Dev</h4>
-                      <p className="text-[11px] text-slate-400 mt-0.5 font-semibold">Gate 2 Operator (Sibling Gate)</p>
-                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Kindergarten exit and shuttle lane dispatcher terminal keys active.</p>
-                    </div>
-                  </button>
-                </div>
+                  <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-800 text-[10px] text-slate-400 text-center font-semibold">
+                    🔑 Default ID is <span className="text-[#fbdf7e] font-mono">gate</span> and password is <span className="text-[#fbdf7e] font-mono">gate123</span>
+                  </div>
+                </form>
               </div>
             )}
 
@@ -817,52 +964,57 @@ export default function App() {
               </div>
             )}
 
-            {activeTab === 'parent' && loggedInRole === 'parent' && (
-              <div className="bg-white border text-slate-900 border-slate-200 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col min-h-[690px] w-full animate-fade-in">
-                
-                {/* Parent App Bar */}
-                <div className="bg-slate-900 text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md">
-                  <div className="flex items-center gap-2.5">
-                    <div className="bg-emerald-600 text-white p-2.5 rounded-xl">
-                      <Smartphone size={18} />
+            {activeTab === 'parent' && loggedInRole === 'parent' && (() => {
+              const loggedInStudent = students.find(s => s.id === loggedInParentStudentId) || students[0];
+              return (
+                <div className="bg-white border text-slate-900 border-slate-200 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col min-h-[690px] w-full animate-fade-in">
+                  
+                  {/* Parent App Bar */}
+                  <div className="bg-slate-900 text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md">
+                    <div className="flex items-center gap-2.5">
+                      <div className="bg-emerald-600 text-white p-2.5 rounded-xl">
+                        <Smartphone size={18} />
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-emerald-400 font-mono tracking-widest font-black uppercase">SECURE GUARDIAN FEED</div>
+                        <h3 className="text-sm font-bold tracking-tight">
+                          {loggedInStudent ? `${loggedInStudent.fatherName} / ${loggedInStudent.motherName} • Linked Pupil: ${loggedInStudent.name}` : 'Parent Secure Portal'}
+                        </h3>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-[10px] text-emerald-400 font-mono tracking-widest font-black uppercase">SECURE GUARDIAN FEED</div>
-                      <h3 className="text-sm font-bold tracking-tight">
-                        Ramesh / Sunita Patel • Linked Pupil: Kabir Patel
-                      </h3>
-                    </div>
+
+                    <button
+                      onClick={() => {
+                        setLoggedInRole(null);
+                        setLoggedInParentStudentId(null);
+                      }}
+                      className="text-[11.5px] bg-[#0b3294] hover:bg-[#0b3294]/85 hover:scale-[1.01] border-2 border-[#fbdf7e]/40 px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-black text-white cursor-pointer self-end sm:self-auto"
+                    >
+                      <LogOut size={12} />
+                      Log Out Portal
+                    </button>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setLoggedInRole(null);
-                    }}
-                    className="text-[11.5px] bg-[#0b3294] hover:bg-[#0b3294]/85 hover:scale-[1.01] border-2 border-[#fbdf7e]/40 px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-black text-white cursor-pointer self-end sm:self-auto"
-                  >
-                    <LogOut size={12} />
-                    Log Out Portal
-                  </button>
+                  {/* Parent Application container */}
+                  <div className="flex-grow bg-slate-50">
+                    <ParentApp
+                      students={students}
+                      setStudents={setStudents}
+                      pickupRequests={pickupRequests}
+                      setPickupRequests={setPickupRequests}
+                      securityLogs={securityLogs}
+                      notifications={notifications}
+                      setNotifications={setNotifications}
+                      emailLogs={emailLogs}
+                      setEmaillogs={setEmailLogs}
+                      addNotification={addNotification}
+                      addEmail={addEmail}
+                      loggedInParentStudentId={loggedInParentStudentId}
+                    />
+                  </div>
                 </div>
-
-                {/* Parent Application container */}
-                <div className="flex-grow bg-slate-50">
-                  <ParentApp
-                    students={students}
-                    setStudents={setStudents}
-                    pickupRequests={pickupRequests}
-                    setPickupRequests={setPickupRequests}
-                    securityLogs={securityLogs}
-                    notifications={notifications}
-                    setNotifications={setNotifications}
-                    emailLogs={emailLogs}
-                    setEmaillogs={setEmailLogs}
-                    addNotification={addNotification}
-                    addEmail={addEmail}
-                  />
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {activeTab === 'gate' && loggedInRole === 'gate' && (
               <div className="bg-white border text-slate-100 border-slate-800 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col min-h-[690px] w-full animate-fade-in">

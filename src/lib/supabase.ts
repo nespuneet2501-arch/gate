@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Student, PickupRequest, SecurityLog, AppNotification, EmailLog } from '../types';
 
 // Read values from Vite environment variables safely
-const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || (import.meta as any).env?.VITE_SUPERBASE_URL || '';
+const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || (import.meta as any).env?.VITE_SUPERBASE_ANON_KEY || '';
 
 // Initialize client if details are provided
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
   full_name TEXT NOT NULL,
   age INTEGER NOT NULL,
   mobile_number TEXT NOT NULL,
+  email TEXT,
+  otp_code TEXT,
   relationship TEXT NOT NULL,
   photograph TEXT NOT NULL,
   aadhaar_number TEXT NOT NULL,
@@ -58,6 +60,10 @@ CREATE TABLE IF NOT EXISTS pickup_requests (
   verification_code TEXT,
   code_expires_at TEXT,
   is_used BOOLEAN DEFAULT false,
+  admin_approval TEXT,
+  approved_by_role TEXT,
+  approved_by_name TEXT,
+  admin_verification_time TEXT,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -20,6 +20,7 @@ interface ParentAppProps {
   setEmaillogs: React.Dispatch<React.SetStateAction<EmailLog[]>>;
   addNotification: (title: string, body: string, type: 'pickup_request' | 'pickup_confirm' | 'system', studentId?: string) => void;
   addEmail: (to: string, subject: string, body: string) => void;
+  loggedInParentStudentId: string | null;
 }
 
 export default function ParentApp({
@@ -33,13 +34,27 @@ export default function ParentApp({
   emailLogs,
   setEmaillogs,
   addNotification,
-  addEmail
+  addEmail,
+  loggedInParentStudentId
 }: ParentAppProps) {
   
   // Active Parent credentials simulation
-  const [activeParentIndex, setActiveParentIndex] = useState(0);
+  const initialIndex = loggedInParentStudentId 
+    ? students.findIndex(s => s.id === loggedInParentStudentId)
+    : 0;
+  const [activeParentIndex, setActiveParentIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
   const activeStudent = students[activeParentIndex] || students[0];
   const [showChildPicker, setShowChildPicker] = useState(false);
+
+  // Sync activeParentIndex if loggedInParentStudentId changes
+  useEffect(() => {
+    if (loggedInParentStudentId) {
+      const idx = students.findIndex(s => s.id === loggedInParentStudentId);
+      if (idx >= 0) {
+        setActiveParentIndex(idx);
+      }
+    }
+  }, [loggedInParentStudentId, students]);
 
   // Mobile App screen: 'dashboard' | 'idcard' | 'new_pickup' | 'history' | 'profile' | 'notifications'
   const [activeScreen, setActiveScreen] = useState<'dashboard' | 'idcard' | 'new_pickup' | 'history' | 'profile' | 'notifications'>('dashboard');
@@ -51,6 +66,24 @@ export default function ParentApp({
   const [primaryEmail, setPrimaryEmail] = useState('');
   const [primaryMobile, setPrimaryMobile] = useState('');
   const [photoUpdateMessage, setPhotoUpdateMessage] = useState('');
+  const [parentPassword, setParentPasswordInternal] = useState('student123');
+
+  // Load parent passwords on active student change
+  useEffect(() => {
+    if (activeStudent) {
+      try {
+        const stored = localStorage.getItem('goenka_parent_passwords');
+        if (stored) {
+          const map = JSON.parse(stored);
+          setParentPasswordInternal(map[activeStudent.admissionNumber] || 'student123');
+        } else {
+          setParentPasswordInternal('student123');
+        }
+      } catch (e) {
+        setParentPasswordInternal('student123');
+      }
+    }
+  }, [activeStudent]);
 
   // Authorize New Pickup State
   const [newPickupName, setNewPickupName] = useState('');
@@ -225,8 +258,19 @@ export default function ParentApp({
         fatherEmail: primaryEmail,
         fatherMobile: primaryMobile
       } : s));
+
+      // Save custom portal passwords in local storage mapper
+      try {
+        const stored = localStorage.getItem('goenka_parent_passwords') || '{}';
+        const map = JSON.parse(stored);
+        map[activeStudent.admissionNumber] = parentPassword;
+        localStorage.setItem('goenka_parent_passwords', JSON.stringify(map));
+      } catch (err) {
+        console.error("Error saving parent password:", err);
+      }
+
       setPhotoUpdateMessage("Profile settings updated successfully!");
-      addNotification("Contact Details Updated", "Contact details and dispersal report routing preferences were updated in the school profile.", "system", activeStudent.id);
+      addNotification("Contact Details Updated", "Contact details, portal passwords, and dispersal report routing preferences were updated in the school profile.", "system", activeStudent.id);
       setTimeout(() => setPhotoUpdateMessage(''), 3000);
     }
   };
@@ -979,6 +1023,21 @@ export default function ParentApp({
                           onChange={(e) => setPrimaryMobile(e.target.value)}
                           className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
                         />
+                      </div>
+
+                      <div className="border-t border-slate-100 pt-3.5">
+                        <label className="block text-[10px] font-bold text-emerald-850 uppercase tracking-wide">Change Portal Login Password</label>
+                        <input 
+                          type="text" 
+                          required
+                          value={parentPassword}
+                          onChange={(e) => setParentPasswordInternal(e.target.value)}
+                          className="w-full text-xs p-2 bg-emerald-50/30 border border-emerald-250 rounded-lg focus:bg-white font-mono mt-1"
+                          placeholder="e.g. student123"
+                        />
+                        <span className="block text-[9px] text-slate-400 mt-1 font-semibold">
+                          Default is student123. Changing this updates your login password for admission access.
+                        </span>
                       </div>
                     </div>
 
