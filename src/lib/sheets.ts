@@ -60,8 +60,15 @@ export const initSheetsAuth = (
   onAuthFailure: () => void
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
-    if (user && cachedAccessToken) {
-      onAuthSuccess(user, cachedAccessToken);
+    const savedToken = localStorage.getItem('goenka_sheets_token');
+    if (user && (cachedAccessToken || savedToken)) {
+      const activeToken = cachedAccessToken || savedToken;
+      if (activeToken) {
+        cachedAccessToken = activeToken;
+        onAuthSuccess(user, activeToken);
+      } else {
+        onAuthFailure();
+      }
     } else {
       cachedAccessToken = null;
       onAuthFailure();
@@ -79,6 +86,7 @@ export const loginWithGoogleSheets = async (): Promise<{ user: User; accessToken
       throw new Error('Failed to retrieve OAuth access token from Google.');
     }
     cachedAccessToken = credential.accessToken;
+    localStorage.setItem('goenka_sheets_token', cachedAccessToken);
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error) {
     console.error('Google Sheets Sign in failure:', error);
@@ -92,6 +100,7 @@ export const loginWithGoogleSheets = async (): Promise<{ user: User; accessToken
 export const logoutFromGoogleSheets = async () => {
   await signOut(auth);
   cachedAccessToken = null;
+  localStorage.removeItem('goenka_sheets_token');
   localStorage.removeItem('goenka_sheets_spreadsheet_id');
 };
 
@@ -221,10 +230,6 @@ export const createSpreadsheetWithTables = async (token: string): Promise<{ id: 
 
 // Clear sheet values
 export const clearSheetValues = async (token: string, spreadsheetId: string, sheetName: string) => {
-  if (token && token.startsWith('auto_simulated')) {
-    console.log(`[Google Sheets Cloud Auto-Sync Simulation] Cleared table "${sheetName}"`);
-    return;
-  }
   const range = `${sheetName}!A1:Z5000`;
   await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:clear`, {
     method: 'POST',
@@ -239,10 +244,6 @@ export const writeSheetData = async (
   sheetName: string, 
   values: any[][]
 ) => {
-  if (token && token.startsWith('auto_simulated')) {
-    console.log(`[Google Sheets Cloud Auto-Sync Simulation] Writing ${values.length - 1} records to table "${sheetName}"`);
-    return;
-  }
   const range = `${sheetName}!A1`;
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, 
@@ -275,10 +276,6 @@ export const readSheetData = async (
   spreadsheetId: string,
   sheetName: string
 ): Promise<any[][] | null> => {
-  if (token && token.startsWith('auto_simulated')) {
-    console.log(`[Google Sheets Cloud Auto-Sync Simulation] Reading from table "${sheetName}"`);
-    return null;
-  }
   try {
     const range = `${sheetName}!A1:Z5000`;
     const res = await fetch(

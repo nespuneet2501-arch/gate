@@ -72,6 +72,24 @@ export const initialStudents: Student[] = [
     motherMobile: "+91 98761 23456",
     fatherPhoto: svgAvatars.father3,
     motherPhoto: svgAvatars.mother3
+  },
+  {
+    id: "STU3004",
+    admissionNumber: "ADM20260401",
+    name: "Ankit Goel",
+    className: "Class 3",
+    section: "Section A",
+    dob: "2017-02-15",
+    address: "C-12, Green Park, New Delhi",
+    photo: svgAvatars.student1,
+    fatherName: "Sanjay Goel",
+    motherName: "Meenakshi Goel",
+    fatherEmail: "sanjay.goel@gmail.com",
+    motherEmail: "meenakshi.goel@gmail.com",
+    fatherMobile: "+91 95551 23456",
+    motherMobile: "+91 95556 54321",
+    fatherPhoto: svgAvatars.father1,
+    motherPhoto: svgAvatars.mother1
   }
 ];
 

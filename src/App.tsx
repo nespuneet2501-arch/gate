@@ -13,7 +13,7 @@ import {
   createSpreadsheetWithTables, writeSheetData, readSheetData, 
   TABLE_SCHEMAS, studentToRow, rowToStudent, requestToRow, 
   rowToRequest, logToRow, rowToLog, notificationToRow, 
-  rowToNotification, emailToRow, rowToEmail, isUsingCustomFirebase
+  rowToNotification, emailToRow, rowToEmail
 } from './lib/sheets';
 import { 
   ShieldCheck, Smartphone, User, Users, CheckCircle, Clock, Calendar, 
@@ -46,21 +46,21 @@ export default function App() {
   // Google Sheets integration state
   const [sheetsUser, setSheetsUser] = useState<any>(() => {
     const saved = localStorage.getItem('goenka_sheets_user_email');
-    return saved ? { email: saved } : { email: 'nespuneet2501@gmail.com' };
+    return saved ? { email: saved } : null;
   });
   const [sheetsToken, setSheetsToken] = useState<string | null>(() => {
-    return localStorage.getItem('goenka_sheets_token') || 'auto_simulated_token_12345';
+    return localStorage.getItem('goenka_sheets_token') || null;
   });
   const [sheetsSpreadsheetId, setSheetsSpreadsheetId] = useState<string | null>(() => {
-    return localStorage.getItem('goenka_sheets_spreadsheet_id') || '1BxiMVs0XRA5nFMdKvgB_d09pA9vycZf3b_2Z8S3A_69-GD-Goenka';
+    return localStorage.getItem('goenka_sheets_spreadsheet_id') || null;
   });
   const [sheetsSpreadsheetUrl, setSheetsSpreadsheetUrl] = useState<string | null>(() => {
-    const id = localStorage.getItem('goenka_sheets_spreadsheet_id') || '1BxiMVs0XRA5nFMdKvgB_d09pA9vycZf3b_2Z8S3A_69-GD-Goenka';
-    return `https://docs.google.com/spreadsheets/d/${id}/edit`;
+    const id = localStorage.getItem('goenka_sheets_spreadsheet_id');
+    return id ? `https://docs.google.com/spreadsheets/d/${id}/edit` : null;
   });
   const [sheetsSyncStatus, setSheetsSyncStatus] = useState<'disabled' | 'connected' | 'syncing' | 'synced' | 'error'>(() => {
     const savedStatus = localStorage.getItem('goenka_sheets_sync_status');
-    return (savedStatus as any) || 'synced';
+    return (savedStatus as any) || 'disabled';
   });
   const [sheetsErrorMsg, setSheetsErrorMsg] = useState<string>('');
 
@@ -108,7 +108,13 @@ export default function App() {
       const savedEmails = localStorage.getItem('goenka_emails');
 
       if (savedStudents) {
-        setStudents(JSON.parse(savedStudents));
+        const parsed = JSON.parse(savedStudents);
+        const containsAnkit = parsed.some((s: any) => s.name === "Ankit Goel" || s.name === "Ankit");
+        if (!containsAnkit) {
+          const ankitObj = initialStudents.find(s => s.name === "Ankit Goel" || s.id === "STU3004");
+          if (ankitObj) parsed.push(ankitObj);
+        }
+        setStudents(parsed);
       } else {
         setStudents(initialStudents);
       }
@@ -184,14 +190,6 @@ export default function App() {
 
   // Google Sheets Authentication Listener on Mount
   useEffect(() => {
-    // If not using custom Firebase override, bootstrap simulation mode instantly on mount without fetching external endpoints
-    if (!isUsingCustomFirebase) {
-      if (sheetsSyncStatus === 'synced' && sheetsToken && sheetsSpreadsheetId) {
-        bootstrapSheetsWithAppState(sheetsToken, sheetsSpreadsheetId);
-      }
-      return;
-    }
-
     const unsubscribe = initSheetsAuth(
       (user, token) => {
         setSheetsUser(user);
@@ -206,8 +204,20 @@ export default function App() {
         }
       },
       () => {
+        const cachedToken = localStorage.getItem('goenka_sheets_token');
+        const cachedId = localStorage.getItem('goenka_sheets_spreadsheet_id');
+        if (cachedToken && cachedId) {
+          setSheetsToken(cachedToken);
+          setSheetsSpreadsheetId(cachedId);
+          setSheetsSpreadsheetUrl(`https://docs.google.com/spreadsheets/d/${cachedId}/edit`);
+          setSheetsSyncStatus('connected');
+          bootstrapSheetsWithAppState(cachedToken, cachedId);
+          return;
+        }
         setSheetsUser(null);
         setSheetsToken(null);
+        setSheetsSpreadsheetId(null);
+        setSheetsSpreadsheetUrl(null);
         setSheetsSyncStatus('disabled');
       }
     );
@@ -218,32 +228,6 @@ export default function App() {
   const handleConnectGoogleSheets = async () => {
     try {
       setSheetsSyncStatus('syncing');
-      
-      if (!isUsingCustomFirebase) {
-        // High-Fidelity zero-infrastructure automatic deployment simulator
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const autoEmail = 'nespuneet2501@gmail.com';
-        const mockId = '1BxiMVs0XRA5nFMdKvgB_d09pA9vycZf3b_2Z8S3A_69-GD-Goenka';
-        
-        localStorage.setItem('goenka_sheets_sync_status', 'synced');
-        localStorage.setItem('goenka_sheets_user_email', autoEmail);
-        localStorage.setItem('goenka_sheets_token', 'auto_simulated_token_12345');
-        localStorage.setItem('goenka_sheets_spreadsheet_id', mockId);
-        
-        setSheetsUser({ email: autoEmail });
-        setSheetsToken('auto_simulated_token_12345');
-        setSheetsSpreadsheetId(mockId);
-        setSheetsSpreadsheetUrl(`https://docs.google.com/spreadsheets/d/${mockId}/edit`);
-        setSheetsSyncStatus('synced');
-        
-        addNotification(
-          "Google Sheets Database Linked", 
-          "GD Goenka dispersal sheets linked successfully. All changes are being backed up automatically.", 
-          "system"
-        );
-        return;
-      }
       
       const authResult = await loginWithGoogleSheets();
       if (authResult) {
@@ -275,9 +259,7 @@ export default function App() {
   const handleDisconnectGoogleSheets = async () => {
     if (confirm("Disconnect Google Sheets integration? Your local state remains safe, but automatic cloud sheet sync will stop.")) {
       try {
-        if (isUsingCustomFirebase) {
-          await logoutFromGoogleSheets();
-        }
+        await logoutFromGoogleSheets();
         
         // Clear caches and reset states
         localStorage.removeItem('goenka_sheets_sync_status');
@@ -405,13 +387,29 @@ export default function App() {
     }
   };
 
+  const handleSyncError = (err: any) => {
+    console.error("Sheets sync error:", err);
+    if (err.message && (
+      err.message.includes('expired') || 
+      err.message.includes('unauthorized') || 
+      err.message.includes('forbidden') || 
+      err.message.includes('permission') ||
+      err.message.includes('401') ||
+      err.message.includes('403')
+    )) {
+      setSheetsSyncStatus('error');
+      setSheetsErrorMsg(err.message || 'Google Sheets session inactive. Please reconnect.');
+    }
+  };
+
   // Auto-sync students to Google Sheets on changes
   useEffect(() => {
     if (sheetsToken && sheetsSpreadsheetId && sheetsSyncStatus === 'synced' && students.length > 0) {
       const payload = [TABLE_SCHEMAS.Students, ...students.map(studentToRow)];
-      writeSheetData(sheetsToken, sheetsSpreadsheetId, 'Students', payload).catch(e => 
-        console.error("Sheets auto-sync students error:", e)
-      );
+      writeSheetData(sheetsToken, sheetsSpreadsheetId, 'Students', payload).catch(e => {
+        console.error("Sheets auto-sync students error:", e);
+        handleSyncError(e);
+      });
     }
   }, [students, sheetsToken, sheetsSpreadsheetId, sheetsSyncStatus]);
 
@@ -419,9 +417,10 @@ export default function App() {
   useEffect(() => {
     if (sheetsToken && sheetsSpreadsheetId && sheetsSyncStatus === 'synced' && pickupRequests.length > 0) {
       const payload = [TABLE_SCHEMAS.PickupRequests, ...pickupRequests.map(requestToRow)];
-      writeSheetData(sheetsToken, sheetsSpreadsheetId, 'PickupRequests', payload).catch(e => 
-        console.error("Sheets auto-sync requests error:", e)
-      );
+      writeSheetData(sheetsToken, sheetsSpreadsheetId, 'PickupRequests', payload).catch(e => {
+        console.error("Sheets auto-sync requests error:", e);
+        handleSyncError(e);
+      });
     }
   }, [pickupRequests, sheetsToken, sheetsSpreadsheetId, sheetsSyncStatus]);
 
@@ -429,9 +428,10 @@ export default function App() {
   useEffect(() => {
     if (sheetsToken && sheetsSpreadsheetId && sheetsSyncStatus === 'synced' && securityLogs.length > 0) {
       const payload = [TABLE_SCHEMAS.SecurityLogs, ...securityLogs.map(logToRow)];
-      writeSheetData(sheetsToken, sheetsSpreadsheetId, 'SecurityLogs', payload).catch(e => 
-        console.error("Sheets auto-sync logs error:", e)
-      );
+      writeSheetData(sheetsToken, sheetsSpreadsheetId, 'SecurityLogs', payload).catch(e => {
+        console.error("Sheets auto-sync logs error:", e);
+        handleSyncError(e);
+      });
     }
   }, [securityLogs, sheetsToken, sheetsSpreadsheetId, sheetsSyncStatus]);
 
@@ -439,9 +439,10 @@ export default function App() {
   useEffect(() => {
     if (sheetsToken && sheetsSpreadsheetId && sheetsSyncStatus === 'synced' && notifications.length > 0) {
       const payload = [TABLE_SCHEMAS.Notifications, ...notifications.map(notificationToRow)];
-      writeSheetData(sheetsToken, sheetsSpreadsheetId, 'Notifications', payload).catch(e => 
-        console.error("Sheets auto-sync notifications error:", e)
-      );
+      writeSheetData(sheetsToken, sheetsSpreadsheetId, 'Notifications', payload).catch(e => {
+        console.error("Sheets auto-sync notifications error:", e);
+        handleSyncError(e);
+      });
     }
   }, [notifications, sheetsToken, sheetsSpreadsheetId, sheetsSyncStatus]);
 
@@ -449,13 +450,18 @@ export default function App() {
   useEffect(() => {
     if (sheetsToken && sheetsSpreadsheetId && sheetsSyncStatus === 'synced' && emailLogs.length > 0) {
       const payload = [TABLE_SCHEMAS.EmailLogs, ...emailLogs.map(emailToRow)];
-      writeSheetData(sheetsToken, sheetsSpreadsheetId, 'EmailLogs', payload).catch(e => 
-        console.error("Sheets auto-sync email logs error:", e)
-      );
+      writeSheetData(sheetsToken, sheetsSpreadsheetId, 'EmailLogs', payload).catch(e => {
+        console.error("Sheets auto-sync email logs error:", e);
+        handleSyncError(e);
+      });
     }
   }, [emailLogs, sheetsToken, sheetsSpreadsheetId, sheetsSyncStatus]);
 
   // Save changes to localStorage on any data updates
+  useEffect(() => {
+    localStorage.setItem('goenka_sheets_sync_status', sheetsSyncStatus);
+  }, [sheetsSyncStatus]);
+
   useEffect(() => {
     if (students.length > 0) {
       localStorage.setItem('goenka_students', JSON.stringify(students));
