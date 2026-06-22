@@ -23,12 +23,17 @@ import {
 } from './lib/sheets';
 import { 
   ShieldCheck, Smartphone, User, Users, CheckCircle, Clock, Calendar, 
-  Sparkles, HelpCircle, AlertCircle, RefreshCw, Layers, Database, Link2
+  Sparkles, HelpCircle, AlertCircle, RefreshCw, Layers, Database, Link2,
+  LogOut, GraduationCap, Lock, Building, MapPin, Key, Radio, LayoutDashboard, Shield
 } from 'lucide-react';
 
 export default function App() {
   // Primary active system role: 'admin' | 'parent' | 'security'
   const [activeRole, setActiveRole] = useState<'admin' | 'parent' | 'security'>('admin');
+
+  // Custom states matching user requirements
+  const [activeTab, setActiveTab] = useState<'staff' | 'parent' | 'gate'>('staff');
+  const [loggedInRole, setLoggedInRole] = useState<'principal' | 'teacher' | 'parent' | 'gate' | null>(null);
 
   // Core reactive data states
   const [students, setStudents] = useState<Student[]>([]);
@@ -499,12 +504,12 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950 relative overflow-x-hidden min-w-[320px]">
       
       {/* Decorative ambient radial backdrop glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(11,50,148,0.22),transparent_70%)] pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(11,50,148,0.25),transparent_65%)] pointer-events-none z-0" />
 
       {/* COMPACT & GORGEOUS BRAND HEADER */}
-      <header className="relative z-10 pt-8 pb-3 text-center max-w-xl mx-auto shrink-0 px-4">
-        <div className="flex items-center justify-center gap-2 mb-2 animate-fade-in">
-          <div className="bg-[#0b3294] border-2 border-[#fbdf7e]/60 px-4 py-2.5 rounded-xl flex items-center justify-center shadow-xl shadow-black/40 select-none">
+      <header className="relative z-10 pt-6 pb-2 text-center max-w-4xl mx-auto shrink-0 px-4">
+        <div className="flex items-center justify-center gap-2 mb-1 animate-fade-in">
+          <div className="bg-[#0b3294] border-2 border-[#fbdf7e]/60 px-5 py-2.5 rounded-xl flex items-center justify-center shadow-2xl shadow-black/40 select-none">
             <span className="font-serif font-extrabold text-[#fbdf7e] text-sm md:text-base tracking-wide uppercase pr-1.5">GD</span>
             
             {/* Iconic flying gold bird symbol */}
@@ -530,316 +535,565 @@ export default function App() {
             <span className="font-serif font-extrabold text-[#fbdf7e] text-sm md:text-base tracking-wide uppercase pl-1.5">GOENKA</span>
           </div>
         </div>
-        <div className="text-[10px] text-[#fbdf7e] font-sans font-black tracking-[0.26em] uppercase leading-none mt-1.5">
-          SMART DISPERSAL SYSTEM
+        <div className="text-[10px] text-[#fbdf7e] font-sans font-black tracking-[0.3em] uppercase leading-none mt-1">
+          SMART DISPERSAL PORTAL
         </div>
       </header>
 
-      {/* PRIMARY INTERACTIVE STAGE */}
-      <main className="relative z-10 flex-grow w-full flex flex-col items-center justify-center px-4 py-2 pb-10 max-w-4xl mx-auto">
+      {/* MASTER RESPONSIVE GRID PANEL */}
+      <main className="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-3 pb-12">
         
-        {/* Dynamic Stakeholder Switcher Pills */}
-        <div className="flex flex-wrap items-center justify-center gap-1.5 mb-5 w-full max-w-[420px]">
-          <div className="bg-slate-900 border border-slate-800 p-1 rounded-2xl shadow-2xl flex w-full">
-            <button
-              id="role-switch-parent"
-              onClick={() => setActiveRole('parent')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] font-black tracking-wide uppercase transition-all duration-300 ${activeRole === 'parent' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/40 border border-[#fbdf7e]/25 scale-[1.01]' : 'text-slate-400 hover:text-white'}`}
-            >
-              <Smartphone size={12} className={activeRole === 'parent' ? 'text-amber-400' : 'text-slate-500'} />
-              Parent App
-            </button>
-            <button
-              id="role-switch-security"
-              onClick={() => setActiveRole('security')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] font-black tracking-wide uppercase transition-all duration-300 ${activeRole === 'security' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/40 border border-[#fbdf7e]/25 scale-[1.01]' : 'text-slate-400 hover:text-white'}`}
-            >
-              <ShieldCheck size={12} className={activeRole === 'security' ? 'text-amber-400' : 'text-slate-500'} />
-              Gate Terminal
-            </button>
+        {/* RESPONSIVE SEGMENTED LEVEL BAR */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 bg-slate-900/65 backdrop-blur-md border border-slate-800 p-3.5 rounded-2xl shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <h2 className="text-xs font-black uppercase tracking-wider text-slate-300">
+              Select Campus Gateway
+            </h2>
+          </div>
+
+          {/* Core Navigation Selector Tabs */}
+          <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
             <button
               id="role-switch-admin"
-              onClick={() => setActiveRole('admin')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] font-black tracking-wide uppercase transition-all duration-300 ${activeRole === 'admin' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/40 border border-[#fbdf7e]/25 scale-[1.01]' : 'text-slate-400 hover:text-white'}`}
+              onClick={() => {
+                setActiveTab('staff');
+                setActiveRole('admin');
+              }}
+              className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'staff' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent'}`}
             >
-              <User size={12} className={activeRole === 'admin' ? 'text-amber-400' : 'text-slate-500'} />
-              Registrar
+              <GraduationCap size={14} className={activeTab === 'staff' ? 'text-amber-400' : 'text-slate-500'} />
+              Principal / Teacher
+            </button>
+
+            <button
+              id="role-switch-parent"
+              onClick={() => {
+                setActiveTab('parent');
+                setActiveRole('parent');
+              }}
+              className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'parent' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent'}`}
+            >
+              <Smartphone size={14} className={activeTab === 'parent' ? 'text-amber-400' : 'text-slate-500'} />
+              Parent Portal
+            </button>
+
+            <button
+              id="role-switch-security"
+              onClick={() => {
+                setActiveTab('gate');
+                setActiveRole('security');
+              }}
+              className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'gate' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent'}`}
+            >
+              <ShieldCheck size={14} className={activeTab === 'gate' ? 'text-amber-400' : 'text-slate-500'} />
+              Gate Terminal
             </button>
           </div>
         </div>
 
-        {/* Informational helpful pill guidelines */}
-        <div className="text-center max-w-[390px] mb-5 px-1 shrink-0">
-          <p className="text-[10px] text-slate-400 leading-relaxed font-semibold">
-            {activeRole === 'parent' && "📱 SIMULATED PARENT HANDSET: Toggle between children in the top bar. Instantly authorize delegate list with 0 SMS cost."}
-            {activeRole === 'security' && "🛡️ GATE TERMINAL: Simulates rugged gate handler Android tablet. Scan standard parent QR cards or verify security codes."}
-            {activeRole === 'admin' && "🏫 REGISTRAR UTILITY: View full student database directory, seed default students list and view instant Eco-Routing logs."}
-          </p>
-        </div>
-
-        {/* AUTOMATED GOOGLE SHEETS SYNC BOARD */}
-        <div id="google-sheets-sync-dashboard" className="w-full max-w-[420px] mb-5 bg-slate-900 border border-slate-800 rounded-[24px] p-4.5 shadow-2xl relative overflow-hidden">
-          {/* Subtle background glow */}
-          <div className="absolute -right-12 -top-12 w-28 h-28 rounded-full bg-emerald-500/10 blur-xl pointer-events-none" />
+        {/* 2-COLUMN GRID (Left column: Active Hub content, Right column: Live Analytics & Sheets Hub) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          <div className="flex items-center justify-between mb-3.5">
-            <div className="flex items-center gap-2">
-              <Database className="text-emerald-400" size={16} />
-              <h3 className="text-xs font-black tracking-wider text-slate-200 uppercase">
-                Google Sheets Database Sync
-              </h3>
-            </div>
-            
-            {/* Status light */}
-            {sheetsSyncStatus === 'disabled' && (
-              <span className="text-[9px] bg-slate-950 text-slate-500 border border-slate-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                ● Offline
-              </span>
+          {/* LEFT 8-COLUMNS: MAIN WORKSPACE CONTAINER */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+
+            {/* UN-AUTHENTICATED ACCESS CONTROL PANELS (FIRST LOGIN VIEW SELECTIONS) */}
+            {activeTab === 'staff' && loggedInRole !== 'principal' && loggedInRole !== 'teacher' && (
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#0b3294]/10 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="text-center max-w-xl mx-auto mb-8">
+                  <div className="bg-[#0b3294]/35 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3.5 border border-[#fbdf7e]/20 text-[#fbdf7e]">
+                    <GraduationCap size={24} />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-slate-100 tracking-tight">Faculty & Administration Gateway</h3>
+                  <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                    Verify credentials, review security delegate clearance checklists, and manage Google Sheets background tables. Select your authorized profile category:
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* PRINCIPAL INTERACTIVE OPTION CARD */}
+                  <button 
+                    onClick={() => {
+                      setLoggedInRole('principal'); 
+                      setActiveRole('admin');
+                    }}
+                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg flex flex-col justify-between h-48 cursor-pointer"
+                  >
+                    <div>
+                      <div className="bg-amber-400/10 text-amber-400 p-2 rounded-xl w-fit group-hover:bg-amber-400/20 transition-colors mb-4">
+                        <Key size={18} />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-amber-300 transition-colors">Dr. R. K. Goenka</h4>
+                      <p className="text-[11px] text-slate-400 mt-1 font-semibold">School Principal</p>
+                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Full clearance authorization privileges, pupil registry, security logs & cloud database synchronization.</p>
+                    </div>
+                  </button>
+
+                  {/* TEACHER INTERACTIVE OPTION CARD */}
+                  <button 
+                    onClick={() => {
+                      setLoggedInRole('teacher'); 
+                      setActiveRole('admin');
+                    }}
+                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg flex flex-col justify-between h-48 cursor-pointer"
+                  >
+                    <div>
+                      <div className="bg-teal-400/10 text-teal-400 p-2 rounded-xl w-fit group-hover:bg-teal-400/20 transition-colors mb-4">
+                        <Users size={18} />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-teal-300 transition-colors">Class Advisor</h4>
+                      <p className="text-[11px] text-teal-400 mt-1 font-semibold">Senior Teacher Hub</p>
+                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">View linked pupil lists, update student directory, and analyze safe class dismissal logs.</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
             )}
-            {sheetsSyncStatus === 'error' && (
-              <span className="text-[9px] bg-rose-950/40 text-rose-400 border border-rose-900/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                ● Sync Error
-              </span>
+
+            {activeTab === 'parent' && loggedInRole !== 'parent' && (
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#0b3294]/10 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="text-center max-w-xl mx-auto mb-8">
+                  <div className="bg-[#0b3294]/35 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3.5 border border-[#fbdf7e]/20 text-[#fbdf7e]">
+                    <Smartphone size={24} />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-slate-100 tracking-tight">Parent / Sibling Access Hub</h3>
+                  <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                    Check your child's schedule, coordinate safe pick-ups, authorize temporary guardians, and generate digital secure parent passport barcodes. Choose parent account:
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => {
+                      setLoggedInRole('parent'); 
+                      setActiveRole('parent');
+                    }}
+                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg h-44 flex flex-col justify-between cursor-pointer"
+                  >
+                    <div>
+                      <div className="bg-emerald-400/10 text-emerald-400 p-2 rounded-xl w-fit group-hover:bg-emerald-400/20 transition-colors mb-3.5">
+                        <User size={18} />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-emerald-300 transition-colors">Mr. Ramesh Patel</h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5 font-semibold">Father / Guardian of Kabir Patel</p>
+                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Connected student: Kabir Patel (Grade 2 - Section A). Digital Passcodes auto-synced.</p>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      setLoggedInRole('parent'); 
+                      setActiveRole('parent');
+                    }}
+                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg h-44 flex flex-col justify-between cursor-pointer"
+                  >
+                    <div>
+                      <div className="bg-pink-400/10 text-pink-400 p-2 rounded-xl w-fit group-hover:bg-pink-400/20 transition-colors mb-3.5">
+                        <User size={18} />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-pink-300 transition-colors">Mrs. Sunita Patel</h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5 font-semibold">Mother / Guardian of Kabir Patel</p>
+                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Access instant parent safety cards, schedule delegate authorized approvals directly.</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
             )}
-            {sheetsSyncStatus === 'syncing' && (
-              <span className="text-[9px] bg-amber-950/40 text-amber-400 border border-amber-900/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
-                Syncing...
-              </span>
+
+            {activeTab === 'gate' && loggedInRole !== 'gate' && (
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#0b3294]/10 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="text-center max-w-xl mx-auto mb-8">
+                  <div className="bg-[#0b3294]/35 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3.5 border border-[#fbdf7e]/20 text-[#fbdf7e]">
+                    <ShieldCheck size={24} />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-slate-100 tracking-tight">Gate Dispersal Guard Terminal</h3>
+                  <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                    Rugged tactical port for gate entry marshals. Instantly scan student barcode cards, log parent vehicle numbers, and verify clearance OTP certificates:
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => {
+                      setLoggedInRole('gate'); 
+                      setActiveRole('security');
+                    }}
+                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg h-44 flex flex-col justify-between cursor-pointer"
+                  >
+                    <div>
+                      <div className="bg-sky-400/10 text-sky-400 p-2 rounded-xl w-fit group-hover:bg-sky-400/20 transition-colors mb-3.5">
+                        <Shield size={18} />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-sky-300 transition-colors">Officer Rajesh Singh</h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5 font-semibold">Gate 1 Operator (Main Entrance)</p>
+                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Main bus turnaround area duty, equipped with live parent RFID tracking feed and Google Sheets sync.</p>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      setLoggedInRole('gate'); 
+                      setActiveRole('security');
+                    }}
+                    className="bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800 hover:border-[#fbdf7e]/40 p-5 rounded-2xl text-left transition-all duration-300 group hover:scale-[1.02] shadow-lg h-44 flex flex-col justify-between cursor-pointer"
+                  >
+                    <div>
+                      <div className="bg-purple-400/10 text-purple-400 p-2 rounded-xl w-fit group-hover:bg-purple-400/20 transition-colors mb-3.5">
+                        <Building size={18} />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-200 group-hover:text-purple-300 transition-colors">Officer Vikram Dev</h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5 font-semibold">Gate 2 Operator (Sibling Gate)</p>
+                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">Kindergarten exit and shuttle lane dispatcher terminal keys active.</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
             )}
-            {(sheetsSyncStatus === 'connected' || sheetsSyncStatus === 'synced') && (
-              <span className="text-[9px] bg-emerald-950/40 text-emerald-400 border border-emerald-900/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                Auto-Synced
-              </span>
+
+
+            {/* ACTIVE WORKSPACE PANELS (AUTHENTICATED COMPONENT CONTAINER SPLIT SYSTEM) */}
+            {activeTab === 'staff' && (loggedInRole === 'principal' || loggedInRole === 'teacher') && (
+              <div className="bg-white text-slate-900 border border-slate-250 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col min-h-[690px] w-full animate-fade-in">
+                
+                {/* Faculty App Bar */}
+                <div className="bg-[#0b3294] text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md">
+                  <div className="flex items-center gap-2.5">
+                    <div className="bg-[#fbdf7e] text-slate-950 p-2.5 rounded-xl">
+                      <GraduationCap size={18} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-amber-300/90 font-mono tracking-widest font-black uppercase">FACULTY CONTROLLER HUB</div>
+                      <h3 className="text-sm font-bold tracking-tight">
+                        Logged in as: {loggedInRole === 'principal' ? 'Principal Dr. R. K. Goenka' : 'Teacher Ms. Ananya Sharma'}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <button
+                      onClick={handleResetToFactorySettings}
+                      title="Reset database back to default seed students list"
+                      className="text-[11px] bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold text-white cursor-pointer"
+                    >
+                      <RefreshCw size={12} />
+                      Reset Seed
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setLoggedInRole(null);
+                      }}
+                      className="text-[11px] bg-red-600 hover:bg-red-500 hover:scale-[1.01] px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold text-white ml-2 cursor-pointer"
+                    >
+                      <LogOut size={12} />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+
+                {/* Main Admin Console Page */}
+                <div className="flex-grow overflow-x-hidden p-4 md:p-6 bg-slate-50">
+                  <AdminPanel
+                    students={students}
+                    setStudents={setStudents}
+                    securityLogs={securityLogs}
+                    setSecurityLogs={setSecurityLogs}
+                    pickupRequests={pickupRequests}
+                    setPickupRequests={setPickupRequests}
+                    addNotification={addNotification}
+                    addEmail={addEmail}
+                    supabaseStatus={supabaseStatus}
+                    supabaseErrorMsg={supabaseErrorMsg}
+                    supabaseLoading={supabaseLoading}
+                  />
+                </div>
+              </div>
             )}
+
+            {activeTab === 'parent' && loggedInRole === 'parent' && (
+              <div className="bg-white border text-slate-900 border-slate-200 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col min-h-[690px] w-full animate-fade-in">
+                
+                {/* Parent App Bar */}
+                <div className="bg-slate-900 text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md">
+                  <div className="flex items-center gap-2.5">
+                    <div className="bg-emerald-600 text-white p-2.5 rounded-xl">
+                      <Smartphone size={18} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-emerald-400 font-mono tracking-widest font-black uppercase">SECURE GUARDIAN FEED</div>
+                      <h3 className="text-sm font-bold tracking-tight">
+                        Ramesh / Sunita Patel • Linked Pupil: Kabir Patel
+                      </h3>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setLoggedInRole(null);
+                    }}
+                    className="text-[11.5px] bg-[#0b3294] hover:bg-[#0b3294]/85 hover:scale-[1.01] border-2 border-[#fbdf7e]/40 px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-black text-white cursor-pointer self-end sm:self-auto"
+                  >
+                    <LogOut size={12} />
+                    Log Out Portal
+                  </button>
+                </div>
+
+                {/* Parent Application container */}
+                <div className="flex-grow bg-slate-50">
+                  <ParentApp
+                    students={students}
+                    setStudents={setStudents}
+                    pickupRequests={pickupRequests}
+                    setPickupRequests={setPickupRequests}
+                    securityLogs={securityLogs}
+                    notifications={notifications}
+                    setNotifications={setNotifications}
+                    emailLogs={emailLogs}
+                    setEmaillogs={setEmailLogs}
+                    addNotification={addNotification}
+                    addEmail={addEmail}
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'gate' && loggedInRole === 'gate' && (
+              <div className="bg-white border text-slate-100 border-slate-800 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col min-h-[690px] w-full animate-fade-in">
+                
+                {/* Gate Terminal Bar */}
+                <div className="bg-slate-950 text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md border-b border-slate-900">
+                  <div className="flex items-center gap-2.5">
+                    <div className="bg-sky-600 p-2.5 rounded-xl">
+                      <ShieldCheck size={18} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-sky-400 font-mono tracking-widest font-black uppercase">TACTICAL DISPERSAL DISPATCH</div>
+                      <h3 className="text-sm font-bold tracking-tight">
+                        Officer Guard Terminal • GD Goenka Bus Gate
+                      </h3>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setLoggedInRole(null);
+                    }}
+                    className="text-[11px] bg-red-950 hover:bg-red-900 border border-red-900/50 hover:scale-[1.01] px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold text-red-200 self-end sm:self-auto cursor-pointer"
+                  >
+                    <LogOut size={12} strokeWidth={2.5} />
+                    Disconnect Gate
+                  </button>
+                </div>
+
+                {/* Gate Security core application screen */}
+                <div className="flex-grow bg-slate-900 text-slate-100">
+                  <SecurityDashboard
+                    students={students}
+                    pickupRequests={pickupRequests}
+                    setPickupRequests={setPickupRequests}
+                    securityLogs={securityLogs}
+                    setSecurityLogs={setSecurityLogs}
+                    addNotification={addNotification}
+                    addEmail={addEmail}
+                  />
+                </div>
+              </div>
+            )}
+
           </div>
 
-          {sheetsSyncStatus === 'disabled' || sheetsSyncStatus === 'error' ? (
-            <div className="space-y-3">
-              <p className="text-[10.5px] text-slate-400 leading-relaxed font-semibold">
-                Link this app to Google Sheets to automatically create and host your cloud security database (all columns/sheets created dynamically). No manual setup required!
-              </p>
-              
-              {sheetsSyncStatus === 'error' && (
-                <div className="bg-rose-950/40 border border-rose-900/40 rounded-xl p-2.5 text-[10px] text-rose-300 font-mono leading-normal">
-                  ⚠️ <strong>Initialization Failure:</strong> {sheetsErrorMsg}
-                </div>
-              )}
 
-              {/* Material UI design Google Sign In button */}
-              <button 
-                id="btn-connect-google-sheets"
-                onClick={handleConnectGoogleSheets}
-                className="w-full bg-emerald-700 hover:bg-emerald-600 active:scale-[0.99] text-white py-2.5 px-4 rounded-xl text-xs font-bold transition duration-200 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 border border-emerald-500/20 cursor-pointer"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M21.35 11.1H12v2.7h5.38c-.24 1.28-.96 2.37-2.07 3.12v2.6h3.33c1.94-1.78 3.06-4.4 3.06-7.52 0-.6-.05-1.2-.15-1.7z" fill="#ffffff" />
-                  <path d="M12 21c2.43 0 4.47-.8 5.96-2.18l-3.33-2.6c-.92.62-2.1.98-3.63.98-2.79 0-5.15-1.89-6-4.42H1.54v2.7C3.02 18.52 7.21 21 12 21z" fill="#34A853" />
-                  <path d="M6 12.78a5.9 5.9 0 0 1 0-3.56V6.52H1.54a11.98 11.98 0 0 0 0 10.96L6 12.78z" fill="#FBBC05" />
-                  <path d="M12 5.75c1.32 0 2.5.45 3.44 1.35l2.58-2.58C16.46 3.06 14.43 2.25 12 2.25c-4.79 0-8.98 2.48-10.46 6.13L6 11.1c.85-2.53 3.21-4.42 6-4.42z" fill="#EA4335" />
-                </svg>
-                Deploy Database to Google Sheets
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3.5">
-              <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex flex-col gap-1">
-                <span className="text-[9px] text-slate-500 uppercase tracking-wider font-extrabold block">CONNECTED STORAGE</span>
-                <span className="text-xs font-bold text-slate-200 truncate flex items-center gap-1.5">
-                  📁 {sheetsUser?.email || 'Authenticated User'}
+          {/* RIGHT 4-COLUMNS: REAL-TIME ANALYTICS & GOOGLE SHEETS DASHBOARD */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            
+            {/* REAL-TIME SYSTEM LIVE STATS GRID */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl relative overflow-hidden">
+              <div className="absolute right-0 top-0 w-24 h-24 bg-[#0b3294]/5 rounded-full blur-2xl pointer-events-none" />
+              
+              <div className="flex items-center gap-2 mb-4">
+                <LayoutDashboard className="text-amber-400" size={16} />
+                <h3 className="text-xs font-black tracking-wider text-slate-200 uppercase">
+                  Portal Safe Attendance
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3.5">
+                <div className="bg-slate-950/50 p-4.5 rounded-2xl border border-slate-800 text-center">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
+                    Pupils Registered
+                  </span>
+                  <div className="text-2xl font-black text-[#fbdf7e] tracking-tight">
+                    {totalStudents}
+                  </div>
+                </div>
+
+                <div className="bg-slate-950/50 p-4.5 rounded-2xl border border-slate-800 text-center">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
+                    Safe Dispersals
+                  </span>
+                  <div className="text-2xl font-black text-emerald-450 tracking-tight">
+                    {statsDispersalsToday}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3.5 bg-slate-950/45 border border-slate-800 px-4 py-3 rounded-2xl flex items-center justify-between text-xs font-semibold">
+                <span className="text-slate-400">Approved Temp Delegates:</span>
+                <span className="bg-[#0b3294]/50 border border-[#fbdf7e]/20 text-[#fbdf7e] text-[10.5px] px-2.5 py-0.5 rounded-full font-black">
+                  {activeAuthorizationsToday} Verified
                 </span>
+              </div>
+            </div>
+
+            {/* AUTOMATED GOOGLE SHEETS SYNC BOARD */}
+            <div id="google-sheets-sync-dashboard" className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl relative overflow-hidden">
+              {/* Subtle background glow */}
+              <div className="absolute -right-12 -top-12 w-28 h-28 rounded-full bg-emerald-500/5 blur-xl pointer-events-none" />
+              
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Database className="text-emerald-400" size={16} />
+                  <h3 className="text-xs font-black tracking-wider text-slate-200 uppercase">
+                    Google Sheets Database
+                  </h3>
+                </div>
                 
-                {sheetsSpreadsheetUrl && (
-                  <a 
-                    href={sheetsSpreadsheetUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-[10px] text-emerald-400 hover:text-emerald-300 font-black mt-1.5 inline-flex items-center gap-1 w-fit border-b border-dashed border-emerald-500/50 hover:border-emerald-400 pb-0.5 transition"
-                  >
-                    <Link2 size={11} /> Open live spreadsheet database ↗
-                  </a>
+                {/* Status light */}
+                {sheetsSyncStatus === 'disabled' && (
+                  <span className="text-[9px] bg-slate-950 text-slate-500 border border-slate-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    ● Offline
+                  </span>
+                )}
+                {sheetsSyncStatus === 'error' && (
+                  <span className="text-[9px] bg-rose-950/40 text-rose-400 border border-rose-900/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    ● Sync Error
+                  </span>
+                )}
+                {sheetsSyncStatus === 'syncing' && (
+                  <span className="text-[9px] bg-amber-950/40 text-amber-400 border border-amber-900/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
+                    Syncing...
+                  </span>
+                )}
+                {(sheetsSyncStatus === 'connected' || sheetsSyncStatus === 'synced') && (
+                  <span className="text-[9px] bg-emerald-950/40 text-emerald-400 border border-emerald-900/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                    Auto-Synced
+                  </span>
                 )}
               </div>
 
-              {/* Automatic tables indicators */}
-              <div className="space-y-1.5">
-                <span className="text-[9px] text-slate-500 uppercase tracking-wider font-extrabold block">LIVE TABLE SCHEMAS</span>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <div className="bg-slate-950/40 p-1.5 rounded-lg border border-slate-800/50 flex items-center justify-between">
-                    <span className="text-[10px] text-slate-350 font-semibold font-mono">Students</span>
-                    <span className="text-[9px] text-emerald-400 font-bold font-sans">Active</span>
-                  </div>
-                  <div className="bg-slate-950/40 p-1.5 rounded-lg border border-slate-800/50 flex items-center justify-between">
-                    <span className="text-[10px] text-slate-350 font-semibold font-mono">PickupRequests</span>
-                    <span className="text-[9px] text-emerald-400 font-bold font-sans">Active</span>
-                  </div>
-                  <div className="bg-slate-950/40 p-1.5 rounded-lg border border-slate-800/50 flex items-center justify-between">
-                    <span className="text-[10px] text-slate-350 font-semibold font-mono">SecurityLogs</span>
-                    <span className="text-[9px] text-emerald-400 font-bold font-sans">Active</span>
-                  </div>
-                  <div className="bg-slate-950/40 p-1.5 rounded-lg border border-slate-800/50 flex items-center justify-between">
-                    <span className="text-[10px] text-slate-350 font-semibold font-mono">Notifications</span>
-                    <span className="text-[9px] text-emerald-400 font-bold font-sans">Active</span>
-                  </div>
-                </div>
-                <div className="bg-slate-950/40 p-1.5 rounded-lg border border-slate-800/50 flex items-center justify-between w-full">
-                  <span className="text-[10px] text-slate-350 font-semibold font-mono">EmailLogs</span>
-                  <span className="text-[9px] text-emerald-400 font-bold font-sans">Active</span>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-2">
-                <button
-                  id="btn-force-sheets-sync"
-                  onClick={handleForceSheetsSync}
-                  className="flex-grow bg-slate-850 hover:bg-slate-800 text-slate-200 py-1.5 rounded-lg text-[10.5px] font-black tracking-wider uppercase transition flex items-center justify-center gap-1 shadow-xs border border-slate-700/50 cursor-pointer"
-                >
-                  ⚡ Force Write Sync
-                </button>
-                <button
-                  id="btn-disconnect-sheets"
-                  onClick={handleDisconnectGoogleSheets}
-                  className="bg-rose-950 hover:bg-rose-900 border border-rose-800/35 text-rose-300 py-1.5 px-3 rounded-lg text-[10.5px] font-bold transition cursor-pointer"
-                >
-                  Disconnect
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* SIMULATED ANDROID MOBILE CHASSIS DISPLAY */}
-        <div className="relative w-full max-w-[370px] h-[700px] bg-slate-900 rounded-[44px] p-2.5 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.8)] border border-slate-800 ring-10 ring-slate-950 flex flex-col overflow-hidden transition-all duration-350 select-none">
-          
-          {/* Selfie camera lens hole centered */}
-          <div className="absolute top-[16px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-slate-950 rounded-full z-45 border border-slate-800/60 flex items-center justify-center">
-            <div className="w-1 h-1 bg-indigo-950 rounded-full opacity-60"></div>
-          </div>
-          
-          {/* Speaker pill slit */}
-          <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-14 h-0.5 bg-slate-950/70 rounded-full z-45"></div>
-
-          {/* Internal high-fidelity mobile surface */}
-          <div className="flex-grow rounded-[34px] bg-slate-900 flex flex-col overflow-hidden relative border border-slate-950/50">
-            
-            {/* Top Android Material UI Status Bar */}
-            <div className="bg-slate-950 text-slate-200 px-5 py-2 flex justify-between items-center text-[10px] font-mono font-bold tracking-wide shrink-0 select-none z-20 border-b border-slate-900/40">
-              <span className="font-extrabold">{androidTime}</span>
-              <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-350">
-                <span>5G</span>
-                <span className="text-emerald-400">📶</span>
-                <span>🔋 98%</span>
-              </div>
-            </div>
-
-            {/* Viewport for the selected app flow */}
-            <div className="flex-1 overflow-hidden relative bg-slate-50 text-slate-900 select-text">
-              {activeRole === 'parent' && (
-                <ParentApp
-                  students={students}
-                  setStudents={setStudents}
-                  pickupRequests={pickupRequests}
-                  setPickupRequests={setPickupRequests}
-                  securityLogs={securityLogs}
-                  notifications={notifications}
-                  setNotifications={setNotifications}
-                  emailLogs={emailLogs}
-                  setEmaillogs={setEmailLogs}
-                  addNotification={addNotification}
-                  addEmail={addEmail}
-                />
-              )}
-
-              {activeRole === 'security' && (
-                <SecurityDashboard
-                  students={students}
-                  pickupRequests={pickupRequests}
-                  setPickupRequests={setPickupRequests}
-                  securityLogs={securityLogs}
-                  setSecurityLogs={setSecurityLogs}
-                  addNotification={addNotification}
-                  addEmail={addEmail}
-                />
-              )}
-
-              {activeRole === 'admin' && (
-                <div className="h-full flex flex-col overflow-hidden bg-white">
-                  {/* Clean mobile view of Admin Panel inside Google Pixel frame */}
-                  <div className="bg-[#0b3294] text-white py-3 px-3.5 flex items-center justify-between shadow-xs select-none sticky top-0 z-10">
-                    <div className="flex items-center gap-1.5">
-                      <div className="bg-amber-400 p-1 rounded text-slate-950">
-                        <Users size={12} />
-                      </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider">Registrar Console</span>
+              {sheetsSyncStatus === 'disabled' || sheetsSyncStatus === 'error' ? (
+                <div className="space-y-4">
+                  <p className="text-[11px] text-slate-400 leading-relaxed font-semibold">
+                    Link Goenka Dispersal System directly to Google Sheets to automatically synchronize student records & parent gate-passes instantly from the cloud.
+                  </p>
+                  
+                  {sheetsSyncStatus === 'error' && (
+                    <div className="bg-rose-950/40 border border-rose-900/40 rounded-xl p-3 text-[10px] text-rose-300 font-mono leading-normal">
+                      ⚠️ {sheetsErrorMsg}
                     </div>
+                  )}
 
+                  {/* Material UI design Google Sign In button */}
+                  <button 
+                    id="btn-connect-google-sheets"
+                    onClick={handleConnectGoogleSheets}
+                    className="w-full bg-emerald-700 hover:bg-emerald-600 active:scale-[0.99] text-white py-2.5 px-4 rounded-xl text-xs font-bold transition duration-200 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 border border-emerald-500/20 cursor-pointer"
+                  >
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M21.35 11.1H12v2.7h5.38c-.24 1.28-.96 2.37-2.07 3.12v2.6h3.33c1.94-1.78 3.06-4.4 3.06-7.52 0-.6-.05-1.2-.15-1.7z" fill="#ffffff" />
+                      <path d="M12 21c2.43 0 4.47-.8 5.96-2.18l-3.33-2.6c-.92.62-2.1.98-3.63.98-2.79 0-5.15-1.89-6-4.42H1.54v2.7C3.02 18.52 7.21 21 12 21z" fill="#34A853" />
+                      <path d="M6 12.78a5.9 5.9 0 0 1 0-3.56V6.52H1.54a11.98 11.98 0 0 0 0 10.96L6 12.78z" fill="#FBBC05" />
+                      <path d="M12 5.75c1.32 0 2.5.45 3.44 1.35l2.58-2.58C16.46 3.06 14.43 2.25 12 2.25c-4.79 0-8.98 2.48-10.46 6.13L6 11.1c.85-2.53 3.21-4.42 6-4.42z" fill="#EA4335" />
+                    </svg>
+                    Deploy Google Sheets Database
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3.5 animate-fade-in">
+                  <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex flex-col gap-1.5">
+                    <span className="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold block">CONNECTED STORAGE</span>
+                    <span className="text-xs font-bold text-slate-250 truncate block">
+                      📁 {sheetsUser?.email || 'Authenticated Account'}
+                    </span>
+                    
+                    {sheetsSpreadsheetUrl && (
+                      <a 
+                        href={sheetsSpreadsheetUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[10.5px] text-emerald-450 hover:text-emerald-350 font-black inline-flex items-center gap-1 w-fit border-b border-dashed border-emerald-500/50 hover:border-emerald-450 pb-0.5 mt-1"
+                      >
+                        <Link2 size={11} /> Open spreadsheet database ↗
+                      </a>
+                    )}
+                  </div>
+
+                  {/* Schema active markers */}
+                  <div className="space-y-1.5">
+                    <span className="text-[9px] text-slate-500 uppercase tracking-widest font-extrabold block">SYNCED TABLES CONTROLLER</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {['Students', 'PickupRequests', 'SecurityLogs', 'Notifications', 'EmailLogs'].map((n) => (
+                        <div key={n} className="bg-slate-950/45 p-2 rounded-lg border border-slate-850 flex items-center justify-between text-[10.5px]">
+                          <span className="text-slate-300 font-mono">{n}</span>
+                          <span className="text-[9.5px] text-emerald-400 font-bold">Active</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Force sync */}
+                  <div className="flex gap-2 pt-1">
                     <button
-                      id="registrar-seed-reset-btn"
-                      onClick={handleResetToFactorySettings}
-                      title="Reset database back to default seed students list"
-                      className="text-[9px] bg-slate-950/20 hover:bg-slate-950/40 border border-white/20 px-2 py-1 rounded transition flex items-center gap-1 font-bold"
+                      id="btn-force-sheets-sync"
+                      onClick={handleForceSheetsSync}
+                      className="flex-grow bg-slate-850 hover:bg-slate-800 text-slate-200 py-2.5 rounded-xl text-[10.5px] font-black tracking-widest uppercase transition flex items-center justify-center gap-1.5 border border-slate-700/50 cursor-pointer"
                     >
-                      <RefreshCw size={10} />
-                      Reset
+                      ⚡ Force Sync Database
+                    </button>
+                    <button
+                      id="btn-disconnect-sheets"
+                      onClick={handleDisconnectGoogleSheets}
+                      className="bg-rose-950/40 hover:bg-rose-900/60 border border-rose-905 text-rose-350 py-2 px-3 rounded-xl text-[10.5px] font-bold transition cursor-pointer"
+                    >
+                      Disconnect
                     </button>
                   </div>
-
-                  <div className="flex-grow overflow-y-auto p-3">
-                    <AdminPanel
-                      students={students}
-                      setStudents={setStudents}
-                      securityLogs={securityLogs}
-                      setSecurityLogs={setSecurityLogs}
-                      pickupRequests={pickupRequests}
-                      setPickupRequests={setPickupRequests}
-                      addNotification={addNotification}
-                      addEmail={addEmail}
-                      supabaseStatus={supabaseStatus}
-                      supabaseErrorMsg={supabaseErrorMsg}
-                      supabaseLoading={supabaseLoading}
-                    />
-                  </div>
                 </div>
               )}
             </div>
 
-            {/* Simulated Android Device Touch Controls Navigation Bar */}
-            <div className="bg-slate-950 text-slate-500 py-3.5 flex items-center justify-around shrink-0 border-t border-slate-900/50 text-[11px] select-none z-20">
-              <button className="hover:text-amber-400 transition-all px-6 py-0.5 active:scale-95 text-xs text-center" onClick={() => handleAndroidBack()} title="Simulate Back Button">
-                ◀
-              </button>
-              <button className="hover:text-amber-400 transition-all px-6 py-0.5 active:scale-95 text-base leading-none text-center" onClick={() => handleAndroidHome()} title="Simulate Home Screen">
-                ●
-              </button>
-              <button className="hover:text-amber-400 transition-all px-6 py-0.5 active:scale-95 text-xs text-center font-bold" onClick={() => handleAndroidRecents()} title="Simulate Active Processes Status">
-                ■
-              </button>
+            {/* REAL-TIME COMM HUB TRIGGER FEED */}
+            <div className="w-full">
+              <CommunicationHub
+                notifications={notifications}
+                setNotifications={setNotifications}
+                emailLogs={emailLogs}
+                setEmailLogs={setEmailLogs}
+              />
             </div>
 
           </div>
-        </div>
 
-        {/* Simulated Eco-Clearance Log Alerts for active evaluations */}
-        <div className="w-full max-w-[420px] mt-6">
-          <CommunicationHub
-            notifications={notifications}
-            setNotifications={setNotifications}
-            emailLogs={emailLogs}
-            setEmailLogs={setEmailLogs}
-          />
         </div>
 
       </main>
 
       {/* BRAND FOOTER ACCENT */}
       <footer className="relative z-10 bg-slate-950/40 py-5 px-4 text-center text-[10px] text-slate-550 border-t border-slate-900/60 shrink-0">
-        <div className="max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-slate-500 font-medium">
-          <p>© 2026 GD Goenka Public School Utilities. Smart Dispersal Gateway.</p>
-          <div className="flex gap-3 font-mono text-[9px] text-slate-600">
-            <span>DURABLE: LOCAL STORAGE</span>
-            <span>NO SMS PROTOCOLS ENABLED</span>
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-500 font-semibold text-[10.5px]">
+          <p>© 2026 GD Goenka Public School. Responsive Smart Dispersal Gateway Portals.</p>
+          <div className="flex gap-4 font-mono text-[9px] text-slate-655 uppercase tracking-wider">
+            <span>Durable Storage: Local Sandbox</span>
+            <span>Cloud Sync: Active Sheets Database</span>
           </div>
         </div>
       </footer>
