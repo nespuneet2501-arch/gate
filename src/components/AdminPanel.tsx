@@ -6,7 +6,6 @@ import {
   CloudLightning, Database, Copy, Check
 } from 'lucide-react';
 import { sampleExcelCSVData, svgAvatars } from '../mockData';
-import { SUPABASE_SQL_SCHEMA } from '../lib/supabase';
 
 interface AdminPanelProps {
   students: Student[];
@@ -17,9 +16,6 @@ interface AdminPanelProps {
   setPickupRequests: React.Dispatch<React.SetStateAction<PickupRequest[]>>;
   addNotification: (title: string, body: string, type: 'pickup_request' | 'pickup_confirm' | 'system', studentId?: string) => void;
   addEmail: (to: string, subject: string, body: string) => void;
-  supabaseStatus?: 'disabled' | 'connected' | 'error' | 'tables_missing';
-  supabaseErrorMsg?: string;
-  supabaseLoading?: boolean;
 }
 
 export default function AdminPanel({
@@ -30,10 +26,7 @@ export default function AdminPanel({
   pickupRequests,
   setPickupRequests,
   addNotification,
-  addEmail,
-  supabaseStatus = 'disabled',
-  supabaseErrorMsg = '',
-  supabaseLoading = false
+  addEmail
 }: AdminPanelProps) {
   // Tabs: 'students' | 'logs' | 'new_pickups' | 'config'
   const [activeSubTab, setActiveSubTab] = useState<'students' | 'logs' | 'new_pickups' | 'config'>('students');
@@ -150,7 +143,7 @@ export default function AdminPanel({
         
         // Find columns
         const stuId = values[0] || `STU${Math.floor(1000 + Math.random() * 9000)}`;
-        const admNum = values[1] || `ADM${Date.now().toString().slice(-6)}`;
+        const admNum = values[1] || `ADM${Date.now().toString().slice(-6)}${i}`;
         const name = values[2] || 'Unknown Student';
         const className = values[3] || 'Class 1';
         const section = values[4] || 'Section A';

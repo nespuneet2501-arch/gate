@@ -8,8 +8,24 @@ import {
 } from '../types';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-// Reuse firebase initialization
-const app = initializeApp(firebaseConfig);
+// Build Firebase Config supporting environmental overrides if user supplies a custom Firebase project
+const getMergedFirebaseConfig = () => {
+  const env = (import.meta as any).env || {};
+  return {
+    apiKey: env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
+    authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
+    projectId: env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+    storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
+    messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
+    appId: env.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
+    measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfig.measurementId || ""
+  };
+};
+
+// Check if a custom Firebase project is being used
+export const isUsingCustomFirebase = !!((import.meta as any).env?.VITE_FIREBASE_PROJECT_ID);
+
+const app = initializeApp(getMergedFirebaseConfig());
 const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
@@ -205,6 +221,10 @@ export const createSpreadsheetWithTables = async (token: string): Promise<{ id: 
 
 // Clear sheet values
 export const clearSheetValues = async (token: string, spreadsheetId: string, sheetName: string) => {
+  if (token && token.startsWith('auto_simulated')) {
+    console.log(`[Google Sheets Cloud Auto-Sync Simulation] Cleared table "${sheetName}"`);
+    return;
+  }
   const range = `${sheetName}!A1:Z5000`;
   await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:clear`, {
     method: 'POST',
@@ -219,6 +239,10 @@ export const writeSheetData = async (
   sheetName: string, 
   values: any[][]
 ) => {
+  if (token && token.startsWith('auto_simulated')) {
+    console.log(`[Google Sheets Cloud Auto-Sync Simulation] Writing ${values.length - 1} records to table "${sheetName}"`);
+    return;
+  }
   const range = `${sheetName}!A1`;
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, 
@@ -251,6 +275,10 @@ export const readSheetData = async (
   spreadsheetId: string,
   sheetName: string
 ): Promise<any[][] | null> => {
+  if (token && token.startsWith('auto_simulated')) {
+    console.log(`[Google Sheets Cloud Auto-Sync Simulation] Reading from table "${sheetName}"`);
+    return null;
+  }
   try {
     const range = `${sheetName}!A1:Z5000`;
     const res = await fetch(
