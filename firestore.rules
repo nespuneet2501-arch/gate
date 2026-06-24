@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Validate IDs are safe and within limits
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    match /students/{studentId} {
+      allow read: if true;
+      allow write: if isValidId(studentId);
+    }
+    
+    match /pickupRequests/{requestId} {
+      allow read: if true;
+      allow write: if isValidId(requestId);
+    }
+    
+    match /securityLogs/{logId} {
+      allow read: if true;
+      allow write: if isValidId(logId);
+    }
+    
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow write: if isValidId(notificationId);
+    }
+    
+    match /emailLogs/{logId} {
+      allow read: if true;
+      allow write: if isValidId(logId);
+    }
+  }
+}

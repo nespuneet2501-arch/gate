@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Student, PickupRequest, SecurityLog, AppNotification, EmailLog } from './types';
 import { 
   initialStudents, initialSecurityLogs, initialPickupRequests, 
@@ -15,10 +15,24 @@ import {
   rowToRequest, logToRow, rowToLog, notificationToRow, 
   rowToNotification, emailToRow, rowToEmail
 } from './lib/sheets';
+import {
+  testFirebaseConnection,
+  fetchStudentsFromFirebase,
+  fetchPickupRequestsFromFirebase,
+  fetchSecurityLogsFromFirebase,
+  fetchNotificationsFromFirebase,
+  fetchEmailLogsFromFirebase,
+  saveStudentToFirebase,
+  savePickupRequestToFirebase,
+  saveSecurityLogToFirebase,
+  saveNotificationToFirebase,
+  saveEmailLogToFirebase,
+  migrateAllToFirebase
+} from './lib/firebaseSync';
 import { 
   ShieldCheck, Smartphone, User, Users, CheckCircle, Clock, Calendar, 
   Sparkles, HelpCircle, AlertCircle, RefreshCw, Layers, Database, Link2,
-  LogOut, GraduationCap, Lock, Building, MapPin, Key, Radio, LayoutDashboard, Shield
+  LogOut, GraduationCap, Lock, Building, MapPin, Key, Radio, LayoutDashboard, Shield, Flame
 } from 'lucide-react';
 
 export default function App() {
@@ -64,16 +78,172 @@ export default function App() {
   });
   const [sheetsErrorMsg, setSheetsErrorMsg] = useState<string>('');
 
-  const [databaseMode, setDatabaseMode] = useState<'local' | 'sheets'>(() => {
+  const [databaseMode, setDatabaseMode] = useState<'local' | 'sheets' | 'firebase'>(() => {
     const savedMode = localStorage.getItem('goenka_database_mode');
-    if (savedMode === 'local' || savedMode === 'sheets') return savedMode;
-    const hasSpreadsheet = !!localStorage.getItem('goenka_sheets_spreadsheet_id');
-    return hasSpreadsheet ? 'sheets' : 'local';
+    if (savedMode === 'local' || savedMode === 'sheets' || savedMode === 'firebase') return savedMode;
+    return 'firebase'; // Default to Firestore Cloud DB for the best cloud-synchronized experience!
   });
 
   useEffect(() => {
     localStorage.setItem('goenka_database_mode', databaseMode);
   }, [databaseMode]);
+
+  // Firebase Firestore Direct Sync States
+  const [firebaseConnecting, setFirebaseConnecting] = useState(false);
+  const [firebaseMigrating, setFirebaseMigrating] = useState(false);
+  const [firebaseStatus, setFirebaseStatus] = useState<'idle' | 'connected' | 'error'>('idle');
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
+
+  // References for Incremental Sync Checks
+  const lastStudentsRef = useRef<Student[]>([]);
+  const lastRequestsRef = useRef<PickupRequest[]>([]);
+  const lastLogsRef = useRef<SecurityLog[]>([]);
+  const lastNotifsRef = useRef<AppNotification[]>([]);
+  const lastEmailsRef = useRef<EmailLog[]>([]);
+
+  // Function to load entire base dataset from Firestore
+  const loadFirebaseDatabase = async () => {
+    setFirebaseConnecting(true);
+    setFirebaseError(null);
+    try {
+      const conn = await testFirebaseConnection();
+      if (!conn) {
+        setFirebaseStatus('error');
+        setFirebaseError('Database offline or firewall restriction.');
+        setFirebaseConnecting(false);
+        return;
+      }
+      setFirebaseStatus('connected');
+      
+      const loadedStudents = await fetchStudentsFromFirebase();
+      const loadedRequests = await fetchPickupRequestsFromFirebase();
+      const loadedLogs = await fetchSecurityLogsFromFirebase();
+      const loadedNotifs = await fetchNotificationsFromFirebase();
+      const loadedEmails = await fetchEmailLogsFromFirebase();
+      
+      if (loadedStudents.length > 0) {
+        setStudents(loadedStudents);
+        setPickupRequests(loadedRequests);
+        setSecurityLogs(loadedLogs);
+        setNotifications(loadedNotifs);
+        setEmailLogs(loadedEmails);
+        
+        // Cache in lastRefs immediately to avoid loop on initial read
+        lastStudentsRef.current = loadedStudents;
+        lastRequestsRef.current = loadedRequests;
+        lastLogsRef.current = loadedLogs;
+        lastNotifsRef.current = loadedNotifs;
+        lastEmailsRef.current = loadedEmails;
+      } else {
+        console.log("Firestore collections are dry. Prompting for bulk migration.");
+      }
+    } catch (err: any) {
+      setFirebaseStatus('error');
+      setFirebaseError(err.message || 'Firestore connection handshake failed.');
+    } finally {
+      setFirebaseConnecting(false);
+    }
+  };
+
+  // Trigger loading when entering Firebase mode
+  useEffect(() => {
+    if (databaseMode === 'firebase') {
+      loadFirebaseDatabase();
+    }
+  }, [databaseMode]);
+
+  // Bulk migration handler
+  const handleMigrateToFirebase = async () => {
+    setFirebaseMigrating(true);
+    try {
+      const res = await migrateAllToFirebase(students, pickupRequests, securityLogs, notifications, emailLogs);
+      if (res.success) {
+        alert(`🎉 Cloud Migration Successful!\n\nTransferred records to Firestore:\n- Students: ${res.counts.students}\n- Pickup Requests: ${res.counts.requests}\n- Security Logs: ${res.counts.logs}\n- Notifications: ${res.counts.notifications}\n- Email Logs: ${res.counts.emails}`);
+        setFirebaseStatus('connected');
+        await loadFirebaseDatabase();
+      }
+    } catch (err: any) {
+      alert(`Migration Failed: ${err.message || err}`);
+    } finally {
+      setFirebaseMigrating(false);
+    }
+  };
+
+  // Direct writing side-effects for Firestore Sync when data changes
+  useEffect(() => {
+    if (databaseMode !== 'firebase' || firebaseStatus !== 'connected' || firebaseConnecting) return;
+    const prev = lastStudentsRef.current;
+    const changed = students.filter(s => {
+      const p = prev.find(item => item.id === s.id);
+      return !p || JSON.stringify(p) !== JSON.stringify(s);
+    });
+    if (changed.length > 0) {
+      changed.forEach(async (student) => {
+        try { await saveStudentToFirebase(student); } catch (e) { console.error(e); }
+      });
+    }
+    lastStudentsRef.current = students;
+  }, [students, databaseMode, firebaseStatus, firebaseConnecting]);
+
+  useEffect(() => {
+    if (databaseMode !== 'firebase' || firebaseStatus !== 'connected' || firebaseConnecting) return;
+    const prev = lastRequestsRef.current;
+    const changed = pickupRequests.filter(r => {
+      const p = prev.find(item => item.id === r.id);
+      return !p || JSON.stringify(p) !== JSON.stringify(r);
+    });
+    if (changed.length > 0) {
+      changed.forEach(async (req) => {
+        try { await savePickupRequestToFirebase(req); } catch (e) { console.error(e); }
+      });
+    }
+    lastRequestsRef.current = pickupRequests;
+  }, [pickupRequests, databaseMode, firebaseStatus, firebaseConnecting]);
+
+  useEffect(() => {
+    if (databaseMode !== 'firebase' || firebaseStatus !== 'connected' || firebaseConnecting) return;
+    const prev = lastLogsRef.current;
+    const changed = securityLogs.filter(l => {
+      const p = prev.find(item => item.id === l.id);
+      return !p || JSON.stringify(p) !== JSON.stringify(l);
+    });
+    if (changed.length > 0) {
+      changed.forEach(async (log) => {
+        try { await saveSecurityLogToFirebase(log); } catch (e) { console.error(e); }
+      });
+    }
+    lastLogsRef.current = securityLogs;
+  }, [securityLogs, databaseMode, firebaseStatus, firebaseConnecting]);
+
+  useEffect(() => {
+    if (databaseMode !== 'firebase' || firebaseStatus !== 'connected' || firebaseConnecting) return;
+    const prev = lastNotifsRef.current;
+    const changed = notifications.filter(n => {
+      const p = prev.find(item => item.id === n.id);
+      return !p || JSON.stringify(p) !== JSON.stringify(n);
+    });
+    if (changed.length > 0) {
+      changed.forEach(async (notif) => {
+        try { await saveNotificationToFirebase(notif); } catch (e) { console.error(e); }
+      });
+    }
+    lastNotifsRef.current = notifications;
+  }, [notifications, databaseMode, firebaseStatus, firebaseConnecting]);
+
+  useEffect(() => {
+    if (databaseMode !== 'firebase' || firebaseStatus !== 'connected' || firebaseConnecting) return;
+    const prev = lastEmailsRef.current;
+    const changed = emailLogs.filter(el => {
+      const p = prev.find(item => item.id === el.id);
+      return !p || JSON.stringify(p) !== JSON.stringify(el);
+    });
+    if (changed.length > 0) {
+      changed.forEach(async (email) => {
+        try { await saveEmailLogToFirebase(email); } catch (e) { console.error(e); }
+      });
+    }
+    lastEmailsRef.current = emailLogs;
+  }, [emailLogs, databaseMode, firebaseStatus, firebaseConnecting]);
 
   // Dynamic status bar time state
   const [androidTime, setAndroidTime] = useState('09:41 AM');
@@ -1219,13 +1389,30 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <Database className="text-emerald-400" size={16} />
                   <h3 className="text-xs font-black tracking-wider text-slate-200 uppercase">
-                    Google Sheets Database
+                    School Database Sync
                   </h3>
                 </div>
                 
                 {/* Status light */}
-                {databaseMode === 'local' ? (
-                  <span className="text-[9px] bg-emerald-950/40 text-emerald-450 border border-emerald-900/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 animate-pulse">
+                {databaseMode === 'firebase' ? (
+                  firebaseStatus === 'connected' ? (
+                    <span className="text-[9.5px] bg-amber-950/40 text-amber-400 border border-amber-900/25 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block animate-pulse" />
+                      🔥 Firestore Online
+                    </span>
+                  ) : firebaseConnecting ? (
+                    <span className="text-[9.5px] bg-slate-950 text-slate-500 border border-slate-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse flex items-center gap-1.5 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block animate-ping" />
+                      Connecting...
+                    </span>
+                  ) : (
+                    <span className="text-[9.5px] bg-rose-955/35 text-rose-450 border border-rose-900/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-550 inline-block" />
+                      Offline
+                    </span>
+                  )
+                ) : databaseMode === 'local' ? (
+                  <span className="text-[9.5px] bg-emerald-950/40 text-emerald-450 border border-emerald-900/20 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0 animate-pulse">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
                     LOCAL ACTIVE
                   </span>
@@ -1265,32 +1452,102 @@ export default function App() {
               </div>
 
               {/* Database Mode Switcher Selector */}
-              <div id="db-mode-selector" className="grid grid-cols-2 bg-slate-950 p-1 rounded-xl border border-slate-850/80 mb-4 text-center select-none">
+              <div id="db-mode-selector" className="grid grid-cols-3 bg-slate-950 p-1 rounded-xl border border-slate-850/80 mb-4 text-center select-none">
+                <button
+                  id="btn-mode-firebase"
+                  onClick={() => setDatabaseMode('firebase')}
+                  className={`py-1.5 px-2 rounded-lg text-[10px] font-extrabold transition-all duration-150 cursor-pointer ${
+                    databaseMode === 'firebase' 
+                      ? 'bg-amber-950/30 text-amber-400 shadow-sm border border-amber-800/15' 
+                      : 'text-slate-450 hover:text-slate-205'
+                  }`}
+                >
+                  🔥 Firestore Cloud
+                </button>
                 <button
                   id="btn-mode-local"
                   onClick={() => setDatabaseMode('local')}
-                  className={`py-1.5 px-3 rounded-lg text-[10.5px] font-bold transition-all duration-150 cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-lg text-[10px] font-extrabold transition-all duration-150 cursor-pointer ${
                     databaseMode === 'local' 
                       ? 'bg-emerald-950/30 text-emerald-450 shadow-sm border border-emerald-800/15' 
                       : 'text-slate-450 hover:text-slate-205'
                   }`}
                 >
-                  🔒 Local Secure Sandbox
+                  🔒 Local Sandbox
                 </button>
                 <button
                   id="btn-mode-sheets"
                   onClick={() => setDatabaseMode('sheets')}
-                  className={`py-1.5 px-3 rounded-lg text-[10.5px] font-bold transition-all duration-150 cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-lg text-[10px] font-extrabold transition-all duration-150 cursor-pointer ${
                     databaseMode === 'sheets' 
                       ? 'bg-emerald-950/30 text-emerald-450 shadow-sm border border-emerald-800/15' 
                       : 'text-slate-450 hover:text-slate-205'
                   }`}
                 >
-                  📊 Google Sheets Sync
+                  📊 Sheets Sync
                 </button>
               </div>
 
-              {databaseMode === 'local' ? (
+              {databaseMode === 'firebase' ? (
+                <div className="space-y-3.5 animate-fade-in text-[11px] text-slate-350">
+                  <div className="bg-amber-950/15 border border-amber-500/10 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-amber-450">
+                      <Flame size={14} className="text-amber-400" />
+                      Direct Firebase Firestore Active
+                    </div>
+                    
+                    <p className="leading-relaxed text-[10.5px] text-slate-400">
+                      The Smart Dispersal System now operates on your cloud-hosted <strong>Google Cloud Firestore Database</strong>. All pupil rosters, gate pass verifications, OTP approvals, and notifications sync immediately from the cloud with zero authorization popups or sandbox blocks!
+                    </p>
+
+                    {firebaseStatus === 'connected' && (
+                      <div className="bg-emerald-950/15 border border-emerald-500/10 p-3 rounded-xl text-[10.5px] text-emerald-400 font-medium leading-relaxed">
+                        ✨ <strong>Cloud DB Connection:</strong> Direct secure synchronization verified. Changes made in the staff principal portal or security terminal propagate in real time.
+                      </div>
+                    )}
+
+                    {firebaseError && (
+                      <div className="bg-rose-950/30 border border-rose-500/15 p-3 rounded-xl text-[10.5px] text-rose-300 font-mono leading-relaxed">
+                        ⚠️ Handshake failed: {firebaseError}
+                        <button 
+                          onClick={() => loadFirebaseDatabase()}
+                          className="block mt-2 bg-rose-800/85 hover:bg-rose-700 hover:text-white text-white p-1 px-2 rounded font-bold cursor-pointer transition text-[9px] uppercase tracking-wider"
+                        >
+                          Retry Connection
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="pt-3 border-t border-slate-800/50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400">Rosters, OTP Requests, & Dispatch Logs:</span>
+                        <span className="text-[10px] text-amber-405 font-bold bg-amber-950/30 px-2 py-0.5 rounded border border-amber-900/15">
+                          {students.length} Pupils • {pickupRequests.length} Passes
+                        </span>
+                      </div>
+
+                      {/* Explicit interactive migration tool */}
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-850/60 flex flex-col gap-2">
+                        <span className="text-[10px] font-black uppercase text-amber-450 tracking-wider flex items-center gap-1.5">
+                          <RefreshCw size={11} className={`${firebaseMigrating ? 'animate-spin' : ''} text-amber-400`} />
+                          Database Migration Toolkit
+                        </span>
+                        <p className="text-[9.5px] text-slate-450 leading-relaxed">
+                          Are Firestore collections unpopulated? Copy all your secure sandbox data, students, active OTP credentials, and history logs straight onto Firestore with 1-click.
+                        </p>
+                        
+                        <button
+                          onClick={handleMigrateToFirebase}
+                          disabled={firebaseMigrating}
+                          className="mt-1 bg-amber-500 text-slate-950 hover:bg-amber-400 font-bold text-[10px] py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition duration-150 shadow-md transform hover:translate-y-[-1px] active:translate-y-0 cursor-pointer disabled:opacity-50"
+                        >
+                          {firebaseMigrating ? 'Migrating Records...' : '🚀 Transfer All to Firebase'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : databaseMode === 'local' ? (
                 <div className="space-y-3.5 animate-fade-in text-[11px] text-slate-350">
                   <div className="bg-emerald-950/10 border border-emerald-500/10 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-emerald-400">

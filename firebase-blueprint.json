@@ -1,0 +1,129 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Unified school student registry record defining parents, identity, and personal photo assets.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "admissionNumber": { "type": "string" },
+        "name": { "type": "string" },
+        "className": { "type": "string" },
+        "section": { "type": "string" },
+        "dob": { "type": "string" },
+        "address": { "type": "string" },
+        "photo": { "type": "string" },
+        "fatherName": { "type": "string" },
+        "motherName": { "type": "string" },
+        "fatherEmail": { "type": "string" },
+        "motherEmail": { "type": "string" },
+        "fatherMobile": { "type": "string" },
+        "motherMobile": { "type": "string" },
+        "fatherPhoto": { "type": "string" },
+        "motherPhoto": { "type": "string" }
+      },
+      "required": ["id", "admissionNumber", "name", "className", "section"]
+    },
+    "PickupRequest": {
+      "title": "PickupRequest",
+      "description": "Gate clearance parent-delegated pass requests containing credentials, validation status, and approval tracking info.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "age": { "type": "number" },
+        "mobileNumber": { "type": "string" },
+        "email": { "type": "string" },
+        "otpCode": { "type": "string" },
+        "relationship": { "type": "string" },
+        "photograph": { "type": "string" },
+        "aadhaarNumber": { "type": "string" },
+        "aadhaarPhoto": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string" },
+        "approvedAt": { "type": "string" },
+        "verificationCode": { "type": "string" },
+        "codeExpiresAt": { "type": "string" },
+        "isUsed": { "type": "boolean" },
+        "adminApproval": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "approvedByRole": { "type": "string" },
+        "approvedByName": { "type": "string" },
+        "adminVerificationTime": { "type": "string" }
+      },
+      "required": ["id", "studentId", "fullName", "relationship", "status", "createdAt"]
+    },
+    "SecurityLog": {
+      "title": "SecurityLog",
+      "description": "Historical system archives recording student departures, verifiers, and physical gate dispersal details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pickupTime": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "className": { "type": "string" },
+        "section": { "type": "string" },
+        "pickupPersonName": { "type": "string" },
+        "pickupPersonPhoto": { "type": "string" },
+        "relationship": { "type": "string" },
+        "gateNumber": { "type": "string" },
+        "securityStaffName": { "type": "string" },
+        "verificationMethod": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "pickupTime", "studentId", "studentName", "pickupPersonName", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Push notification messages dispatched to parents monitoring live dispersal status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "studentId": { "type": "string" },
+        "type": { "type": "string", "enum": ["pickup_request", "pickup_confirm", "system"] },
+        "isRead": { "type": "boolean" }
+      },
+      "required": ["id", "title", "body", "timestamp", "type", "isRead"]
+    },
+    "EmailLog": {
+      "title": "EmailLog",
+      "description": "Chronological history log of system emails delivered automatically to delegates and security personnel.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "to": { "type": "string" },
+        "subject": { "type": "string" },
+        "body": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "to", "subject", "body", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Primary student registry list."
+    },
+    "/pickupRequests/{requestId}": {
+      "schema": "PickupRequest",
+      "description": "Visitor and delegate gate clearances registered by parents."
+    },
+    "/securityLogs/{logId}": {
+      "schema": "SecurityLog",
+      "description": "Gate clearance checkout receipts registered by guards."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Dispersal alerts."
+    },
+    "/emailLogs/{logId}": {
+      "schema": "EmailLog",
+      "description": "Outbox history records."
+    }
+  }
+}
