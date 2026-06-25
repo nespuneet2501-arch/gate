@@ -96,22 +96,26 @@ export default function ParentApp({
 }: ParentAppProps) {
   
   // Active Parent credentials simulation
+  const filteredStudents = loggedInParentStudentId 
+    ? students.filter(s => s.id === loggedInParentStudentId) 
+    : students;
+
   const initialIndex = loggedInParentStudentId 
-    ? students.findIndex(s => s.id === loggedInParentStudentId)
+    ? filteredStudents.findIndex(s => s.id === loggedInParentStudentId)
     : 0;
   const [activeParentIndex, setActiveParentIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
-  const activeStudent = students[activeParentIndex] || students[0];
+  const activeStudent = filteredStudents[activeParentIndex] || filteredStudents[0];
   const [showChildPicker, setShowChildPicker] = useState(false);
 
   // Sync activeParentIndex if loggedInParentStudentId changes
   useEffect(() => {
     if (loggedInParentStudentId) {
-      const idx = students.findIndex(s => s.id === loggedInParentStudentId);
+      const idx = filteredStudents.findIndex(s => s.id === loggedInParentStudentId);
       if (idx >= 0) {
         setActiveParentIndex(idx);
       }
     }
-  }, [loggedInParentStudentId, students]);
+  }, [loggedInParentStudentId, filteredStudents]);
 
   // Mobile App screen: 'dashboard' | 'idcard' | 'new_pickup' | 'history' | 'profile' | 'notifications'
   const [activeScreen, setActiveScreen] = useState<'dashboard' | 'idcard' | 'new_pickup' | 'history' | 'profile' | 'notifications'>('dashboard');
@@ -419,10 +423,10 @@ export default function ParentApp({
               <span className="text-[7.5px] text-amber-400">▼</span>
             </button>
 
-            {showChildPicker && (
+             {showChildPicker && (
               <div id="parent-child-picker-dropdown" className="absolute left-0 mt-2 w-48 bg-slate-950 border border-slate-800 rounded-2xl shadow-xl py-1 z-30 animate-in fade-in duration-100">
                 <p className="text-[8px] font-black text-slate-400 px-3 py-1.5 uppercase tracking-wider border-b border-slate-900 mb-1">Linked Profiles</p>
-                {students.map((student, idx) => (
+                {filteredStudents.map((student, idx) => (
                   <button
                     key={student.id}
                     id={`parent-select-student-${student.id}`}
