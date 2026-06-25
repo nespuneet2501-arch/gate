@@ -36,7 +36,7 @@ import {
 import { 
   ShieldCheck, Smartphone, User, Users, CheckCircle, Clock, Calendar, 
   Sparkles, HelpCircle, AlertCircle, RefreshCw, Layers, Database, Link2,
-  LogOut, GraduationCap, Lock, Building, MapPin, Key, Radio, LayoutDashboard, Shield, Flame
+  LogOut, GraduationCap, Lock, Building, MapPin, Key, Radio, LayoutDashboard, Shield, Flame, Power
 } from 'lucide-react';
 import { CustomDialog, DialogType } from './components/CustomDialog';
 
@@ -86,6 +86,8 @@ export default function App() {
   // Custom states matching user requirements
   const [activeTab, setActiveTab] = useState<'staff' | 'parent' | 'gate' | 'home'>('home');
   const [loggedInRole, setLoggedInRole] = useState<'principal' | 'teacher' | 'parent' | 'gate' | null>(null);
+  const [isAppClosed, setIsAppClosed] = useState(false);
+  const [lastBackClickTime, setLastBackClickTime] = useState(0);
 
   // New auth states
   const [loggedInParentStudentId, setLoggedInParentStudentId] = useState<string | null>(null);
@@ -508,20 +510,29 @@ export default function App() {
   };
 
   const handleAndroidBack = () => {
-    // Dispatch event to parent app if in a sub-screen
-    const event = new CustomEvent('android-back-pressed');
-    window.dispatchEvent(event);
-    
-    setTimeout(() => {
-      if (activeTab !== 'home') {
-        const isSubScreen = localStorage.getItem('parent_is_sub_screen') === 'true';
-        if (isSubScreen && activeTab === 'parent') {
-          // Handled internally in ParentApp
-        } else {
-          setActiveTab('home');
+    const now = Date.now();
+    if (now - lastBackClickTime < 2000) {
+      // Clicked twice in succession: close the application!
+      setIsAppClosed(true);
+    } else {
+      // First click or not in succession: navigate to home screen
+      setLastBackClickTime(now);
+      
+      // Dispatch event to parent app if in a sub-screen
+      const event = new CustomEvent('android-back-pressed');
+      window.dispatchEvent(event);
+      
+      setTimeout(() => {
+        if (activeTab !== 'home') {
+          const isSubScreen = localStorage.getItem('parent_is_sub_screen') === 'true';
+          if (isSubScreen && activeTab === 'parent') {
+            // Handled internally in ParentApp
+          } else {
+            setActiveTab('home');
+          }
         }
-      }
-    }, 50);
+      }, 50);
+    }
   };
 
   const handleAndroidRecents = () => {
@@ -1158,6 +1169,7 @@ export default function App() {
   const activeAuthorizationsToday = pickupRequests.filter(req => req.status === 'approved' && !req.isUsed).length;
 
   const isLoggedIn = loggedInRole !== null;
+  const isAdminOrTeacher = loggedInRole === 'principal' || loggedInRole === 'teacher';
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950 relative overflow-x-hidden min-w-[320px]">
@@ -1166,7 +1178,7 @@ export default function App() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(11,50,148,0.25),transparent_65%)] pointer-events-none z-0" />
 
       {/* COMPACT & GORGEOUS BRAND HEADER */}
-      {isLoggedIn && (
+      {isAdminOrTeacher && (
         <header className="relative z-10 pt-6 pb-2 text-center max-w-4xl mx-auto shrink-0 px-4">
           <div className="flex items-center justify-center gap-2 mb-1 animate-fade-in">
             <div className="bg-[#0b3294] border-2 border-[#fbdf7e]/60 px-5 py-2.5 rounded-xl flex items-center justify-center shadow-2xl shadow-black/40 select-none">
@@ -1202,10 +1214,10 @@ export default function App() {
       )}
 
       {/* MASTER RESPONSIVE GRID PANEL */}
-      <main className={`relative z-10 flex-grow w-full mx-auto px-4 md:px-6 lg:px-8 py-3 pb-12 flex flex-col justify-center transition-all duration-300 ${isLoggedIn ? 'max-w-7xl' : 'max-w-md min-h-[calc(100vh-40px)]'}`}>
+      <main className={`relative z-10 flex-grow w-full mx-auto px-4 md:px-6 lg:px-8 py-3 pb-12 flex flex-col justify-center transition-all duration-300 ${isAdminOrTeacher ? 'max-w-7xl' : 'max-w-md min-h-[calc(100vh-40px)]'}`}>
         
         {/* RESPONSIVE SEGMENTED LEVEL BAR */}
-        {isLoggedIn && (
+        {isAdminOrTeacher && (
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 bg-slate-900/65 backdrop-blur-md border border-slate-800 p-3.5 rounded-2xl shadow-xl animate-fade-in">
             <div className="flex items-center gap-3">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1277,18 +1289,40 @@ export default function App() {
         )}
 
         {/* 2-COLUMN GRID (Left column: Active Hub content, Right column: Live Analytics & Sheets Hub) */}
-        <div className={isLoggedIn ? "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" : "w-full flex justify-center py-4"}>
+        <div className={isAdminOrTeacher ? "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" : "w-full flex justify-center py-4"}>
           
           {/* LEFT 8-COLUMNS: MAIN WORKSPACE CONTAINER */}
-          <div className={isLoggedIn ? "lg:col-span-8 flex flex-col gap-6 font-sans w-full" : "w-full max-w-[420px] flex flex-col gap-6 font-sans"}>
+          <div className={isAdminOrTeacher ? "lg:col-span-8 flex flex-col gap-6 font-sans w-full" : "w-full max-w-[420px] flex flex-col gap-6 font-sans"}>
 
             {/* Unified Simulated Android Device / App Frame */}
-            <div className={`bg-slate-950 flex flex-col relative overflow-hidden shadow-2xl transition-all duration-300 ${isLoggedIn ? 'border border-slate-850 rounded-3xl' : 'border-[12px] border-slate-900 rounded-[56px] shadow-black/95 min-h-[720px] aspect-[9/19.5]'}`}>
+            <div className={`bg-slate-950 flex flex-col relative overflow-hidden shadow-2xl transition-all duration-300 ${isAdminOrTeacher ? 'border border-slate-850 rounded-3xl' : 'border-[12px] border-slate-900 rounded-[56px] shadow-black/95 min-h-[720px] aspect-[9/19.5]'}`}>
               
               {/* Interactive Workspace App Views */}
-              <div className="flex-grow">
+              <div className="flex-grow flex flex-col relative">
                 
-                {activeTab === 'home' && (
+                {isAppClosed ? (
+                  <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center text-center p-6 z-50 animate-fade-in min-h-[550px]">
+                    <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-850 flex items-center justify-center text-amber-400 mb-4 shadow-2xl animate-pulse">
+                      <Power size={28} />
+                    </div>
+                    <h2 className="text-sm font-black text-slate-200 uppercase tracking-widest">Application Terminated</h2>
+                    <p className="text-[10px] text-slate-400 mt-2 max-w-[220px] leading-relaxed">
+                      GD Goenka Smart Dispersal has been shut down. Tap below to turn on the device again.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setIsAppClosed(false);
+                        setActiveTab('home');
+                        setLoggedInRole(null);
+                      }}
+                      className="mt-6 text-[10px] font-bold uppercase tracking-wider text-amber-300 hover:text-amber-200 bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-xl transition cursor-pointer"
+                    >
+                      Power On Device
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {activeTab === 'home' && (
                   <div className="bg-slate-950 p-6 md:p-8 relative overflow-hidden animate-fade-in text-slate-100 flex flex-col items-center justify-center min-h-[550px] w-full">
                     {/* Simulated Android Status Bar */}
                     <div className="absolute top-0 inset-x-0 bg-slate-900/60 border-b border-slate-900/30 px-5 py-2.5 flex items-center justify-between text-[11px] font-mono text-slate-400 font-semibold select-none">
@@ -1769,6 +1803,8 @@ export default function App() {
                     </div>
                   </div>
                 )}
+                  </>
+                )}
 
               </div>
 
@@ -1809,7 +1845,7 @@ export default function App() {
           </div>
 
 
-          {isLoggedIn && (
+          {isAdminOrTeacher && (
             <div className="lg:col-span-4 flex flex-col gap-6">
             
             {/* REAL-TIME SYSTEM LIVE STATS GRID */}
@@ -2239,7 +2275,7 @@ export default function App() {
       </main>
 
       {/* BRAND FOOTER ACCENT */}
-      {isLoggedIn && (
+      {isAdminOrTeacher && (
         <footer className="relative z-10 bg-slate-950/40 py-5 px-4 text-center text-[10px] text-slate-550 border-t border-slate-900/60 shrink-0">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-500 font-semibold text-[10.5px]">
             <p>© 2026 GD Goenka Public School. Responsive Smart Dispersal Gateway Portals.</p>
