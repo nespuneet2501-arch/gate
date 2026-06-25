@@ -1654,8 +1654,8 @@ export default function AdminPanel({
                             {req.createdAt && (() => {
                               const reqTime = formatRequestTime(req.createdAt);
                               return (
-                                <div className="text-[10.5px] text-slate-500 mt-1">
-                                  Sent: <strong className="text-slate-800 font-extrabold">{reqTime.time}</strong> on <strong className="text-slate-800 font-extrabold">{reqTime.date}</strong>
+                                <div className="text-[11px] text-slate-700 mt-2 bg-amber-50/80 border border-amber-200/60 px-2.5 py-1.5 rounded-lg inline-block text-left">
+                                  📬 Received: <strong className="font-black text-slate-900 text-[12px]">{reqTime.time}</strong> on <strong className="font-black text-slate-900 text-[12px]">{reqTime.date}</strong>
                                 </div>
                               );
                             })()}

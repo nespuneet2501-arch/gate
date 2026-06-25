@@ -30,8 +30,21 @@ export default function SecurityDashboard({
   const [activeGate, setActiveGate] = useState(gatesList[0]);
   const [activeOfficer, setActiveOfficer] = useState(officersList[0]);
 
-  // Tab mode: 'regular' (QR scanners) | 'new_person' (codes verify)
-  const [securityTab, setSecurityTab] = useState<'regular' | 'new_person'>('regular');
+  // Tab mode: 'existing_parent' | 'temp_code' | 'new_visitor'
+  const [securityTab, setSecurityTab] = useState<'existing_parent' | 'temp_code' | 'new_visitor'>('existing_parent');
+
+  // Input for existing parent manual verification
+  const [inputAdmissionNo, setInputAdmissionNo] = useState('');
+
+  // States for 'Verify New Visitor'
+  const [visitorName, setVisitorName] = useState('');
+  const [visitorMobile, setVisitorMobile] = useState('');
+  const [visitorRelationship, setVisitorRelationship] = useState('Guardian / Family Friend');
+  const [visitorAadhaar, setVisitorAadhaar] = useState('');
+  const [visitorStudentId, setVisitorStudentId] = useState('');
+  const [visitorNotes, setVisitorNotes] = useState('');
+  const [visitorPhoto, setVisitorPhoto] = useState(svgAvatars.father2);
+  const [visitorAadhaarPhoto, setVisitorAadhaarPhoto] = useState((svgAvatars as any).aadhaarPhoto || svgAvatars.student1);
 
   // Hard Copy scan tracker
   const [scanIsHardCopy, setScanIsHardCopy] = useState(false);
@@ -101,6 +114,107 @@ export default function SecurityDashboard({
     }
 
     setScanResultStatus('AUTHORIZED');
+  };
+
+  // Verify parent by ID or Admission Number (Admit Card QR)
+  const handleVerifyParentById = (admissionNoOrId: string, role: 'father' | 'mother') => {
+    handleResetScanner();
+    const cleanInput = admissionNoOrId.trim().toUpperCase();
+    if (!cleanInput) {
+      setScanResultStatus('NOT_AUTHORIZED');
+      setErrorMessage("Input Error: Please provide a Student ID, Admission Number, or Parent ID.");
+      return;
+    }
+
+    const student = students.find(s => 
+      s.admissionNumber.toUpperCase() === cleanInput || 
+      s.id.toUpperCase() === cleanInput
+    );
+
+    if (!student) {
+      setScanResultStatus('NOT_AUTHORIZED');
+      setErrorMessage(`Verification Failed: No parent record or student found with ID/Admission No "${cleanInput}".`);
+      return;
+    }
+
+    setScannedStudent(student);
+    if (role === 'father') {
+      setScannedPersonDetails({
+        name: student.fatherName,
+        photo: student.fatherPhoto || svgAvatars.father1,
+        relationship: 'Father'
+      });
+    } else {
+      setScannedPersonDetails({
+        name: student.motherName,
+        photo: student.motherPhoto || svgAvatars.mother1,
+        relationship: 'Mother'
+      });
+    }
+    setScanResultStatus('AUTHORIZED');
+    setScanIsHardCopy(true); // Verified via pre-existing parent ID
+  };
+
+  // Register and verify a new visitor on-the-spot at the gate
+  const handleRegisterNewVisitor = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!visitorName.trim() || !visitorMobile.trim() || !visitorStudentId || !visitorRelationship) {
+      alert("Please fill in all required fields for New Visitor Verification.");
+      return;
+    }
+
+    const targetStudent = students.find(s => s.id === visitorStudentId);
+    if (!targetStudent) {
+      alert("Selected student not found in current school database.");
+      return;
+    }
+
+    // Generate a temporary request record representing the visitor
+    const tempRequestId = `REQ_V${Math.floor(1000 + Math.random() * 9000)}`;
+    const newRequest: PickupRequest = {
+      id: tempRequestId,
+      studentId: visitorStudentId,
+      fullName: visitorName,
+      age: 35,
+      mobileNumber: visitorMobile,
+      relationship: `${visitorRelationship} (New Visitor Verified)`,
+      photograph: visitorPhoto || svgAvatars.father2,
+      aadhaarNumber: visitorAadhaar || 'Not Disclosed',
+      aadhaarPhoto: visitorAadhaarPhoto || (svgAvatars as any).aadhaarPhoto,
+      notes: visitorNotes || 'Gate-side direct check-in & manual validation.',
+      status: 'approved',
+      createdAt: new Date().toISOString(),
+      isUsed: false,
+      isDelegated: true,
+      adminApproval: 'approved',
+      approvedByRole: 'gate_officer',
+      approvedByName: activeOfficer,
+      verificationCode: 'VISITOR',
+    };
+
+    // Update state to include this new visitor record
+    setPickupRequests(prev => [newRequest, ...prev]);
+
+    // Load into scanner viewfinder viewport instantly
+    setScannedStudent(targetStudent);
+    setScannedPersonDetails({
+      name: newRequest.fullName,
+      photo: newRequest.photograph,
+      relationship: newRequest.relationship,
+      aadhaar: newRequest.aadhaarNumber,
+      aadhaarPhoto: newRequest.aadhaarPhoto,
+      notes: newRequest.notes
+    });
+    setScanResultStatus('TEMPORARY_APPROVED');
+
+    alert(`🎉 Visitor "${visitorName}" registered & authorized successfully for student "${targetStudent.name}". Details loaded into gate viewfinder for student dispersal!`);
+    
+    // Reset visitor form inputs
+    setVisitorName('');
+    setVisitorMobile('');
+    setVisitorRelationship('Guardian / Family Friend');
+    setVisitorAadhaar('');
+    setVisitorNotes('');
   };
 
   // Perform Temporary verification code input

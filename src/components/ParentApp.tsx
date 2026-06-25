@@ -522,8 +522,8 @@ export default function ParentApp({
                                         DELEGATED
                                       </span>
                                     )}
-                                    <div className="text-[10px] text-slate-500 mt-1.5">
-                                      Sent at <strong className="text-slate-800 font-extrabold">{reqTime.time}</strong> on <strong className="text-slate-800 font-extrabold">{reqTime.date}</strong>
+                                    <div className="text-[11px] text-slate-700 mt-2 bg-white/75 border border-slate-200/60 px-2 py-1 rounded-lg inline-block text-left">
+                                      📬 Received: <strong className="font-black text-slate-900">{reqTime.time}</strong> on <strong className="font-black text-slate-900">{reqTime.date}</strong>
                                     </div>
                                   </div>
                                   <span className={`text-[8.5px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
