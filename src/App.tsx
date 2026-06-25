@@ -1430,7 +1430,7 @@ export default function App() {
 
                 {/* UN-AUTHENTICATED ACCESS CONTROL PANELS (FIRST LOGIN VIEW SELECTIONS) */}
                 {activeTab === 'staff' && loggedInRole !== 'principal' && loggedInRole !== 'teacher' && (
-                  <div className="bg-slate-900 p-6 md:p-8 relative overflow-hidden animate-fade-in shadow-[#0b3294]/5 w-full">
+                  <div className="bg-slate-900 p-6 md:p-8 absolute inset-0 overflow-y-auto flex flex-col animate-fade-in shadow-[#0b3294]/5 w-full">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-[#0b3294]/10 rounded-full blur-3xl pointer-events-none" />
                     
                     <div className="text-center max-w-xl mx-auto mb-6">
@@ -1481,12 +1481,26 @@ export default function App() {
                         />
                       </div>
 
-                      <button
-                        type="submit"
-                        className="w-full bg-[#0b3294] hover:bg-[#0b3294]/85 active:scale-[0.99] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-[#fbdf7e]/20 cursor-pointer"
-                      >
-                        Authenticate {staffLoginType === 'principal' ? 'Principal' : 'Teacher'}
-                      </button>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('home');
+                            setLoginUsername('');
+                            setLoginPassword('');
+                            setLoginError('');
+                          }}
+                          className="flex-1 bg-slate-900 hover:bg-slate-800 text-slate-300 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-slate-800 cursor-pointer"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex-grow bg-[#0b3294] hover:bg-[#0b3294]/85 active:scale-[0.99] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-[#fbdf7e]/20 cursor-pointer"
+                        >
+                          Authenticate {staffLoginType === 'principal' ? 'Principal' : 'Teacher'}
+                        </button>
+                      </div>
 
                       <div className="text-center pt-2">
                         {staffLoginType === 'principal' ? (
@@ -1522,7 +1536,7 @@ export default function App() {
                 )}
 
                 {activeTab === 'parent' && loggedInRole !== 'parent' && (
-                  <div className="bg-slate-900 p-6 md:p-8 relative overflow-hidden animate-fade-in shadow-emerald-950/5 w-full">
+                  <div className="bg-slate-900 p-6 md:p-8 absolute inset-0 overflow-y-auto flex flex-col animate-fade-in shadow-emerald-950/5 w-full">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-[#0b3294]/10 rounded-full blur-3xl pointer-events-none" />
                     
                     <div className="text-center max-w-xl mx-auto mb-6">
@@ -1571,12 +1585,26 @@ export default function App() {
                         />
                       </div>
 
-                      <button
-                        type="submit"
-                        className="w-full bg-[#0b3294] hover:bg-[#0b3294]/85 active:scale-[0.99] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-[#fbdf7e]/20 cursor-pointer"
-                      >
-                        Authenticate Parent
-                      </button>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('home');
+                            setLoginUsername('');
+                            setLoginPassword('');
+                            setLoginError('');
+                          }}
+                          className="flex-1 bg-slate-900 hover:bg-slate-800 text-slate-300 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-slate-800 cursor-pointer"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex-grow bg-[#0b3294] hover:bg-[#0b3294]/85 active:scale-[0.99] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-[#fbdf7e]/20 cursor-pointer"
+                        >
+                          Authenticate Parent
+                        </button>
+                      </div>
 
                       <div className="bg-slate-950/40 p-3.5 rounded-xl border border-slate-800 text-[10px] text-slate-400 leading-normal font-semibold">
                         🔑 <strong className="text-[#fbdf7e]">First time login info:</strong> Enter your child's Admission Number as both the Admission Number and the password. You can change your password inside the parent profile page after logging in.
@@ -1608,7 +1636,7 @@ export default function App() {
                 )}
 
                 {activeTab === 'gate' && loggedInRole !== 'gate' && (
-                  <div className="bg-slate-900 p-6 md:p-8 relative overflow-hidden animate-fade-in shadow-rose-950/5 w-full">
+                  <div className="bg-slate-900 p-6 md:p-8 absolute inset-0 overflow-y-auto flex flex-col animate-fade-in shadow-rose-950/5 w-full">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-[#0b3294]/10 rounded-full blur-3xl pointer-events-none" />
                     
                     <div className="text-center max-w-xl mx-auto mb-6">
@@ -1657,12 +1685,26 @@ export default function App() {
                         />
                       </div>
 
-                      <button
-                        type="submit"
-                        className="w-full bg-[#0b3294] hover:bg-[#0b3294]/85 active:scale-[0.99] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-[#fbdf7e]/20 cursor-pointer"
-                      >
-                        Authenticate Gate Marshall
-                      </button>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('home');
+                            setLoginUsername('');
+                            setLoginPassword('');
+                            setLoginError('');
+                          }}
+                          className="flex-1 bg-slate-900 hover:bg-slate-800 text-slate-300 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-slate-800 cursor-pointer"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex-grow bg-[#0b3294] hover:bg-[#0b3294]/85 active:scale-[0.99] text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition border border-[#fbdf7e]/20 cursor-pointer"
+                        >
+                          Authenticate Gate Marshall
+                        </button>
+                      </div>
 
                       <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-800 text-[10px] text-slate-400 text-center font-semibold">
                         🔑 Default ID is <span className="text-[#fbdf7e] font-mono">gate</span> and password is <span className="text-[#fbdf7e] font-mono">gate123</span>
@@ -1674,7 +1716,7 @@ export default function App() {
 
                 {/* ACTIVE WORKSPACE PANELS (AUTHENTICATED COMPONENT CONTAINER SPLIT SYSTEM) */}
                 {activeTab === 'staff' && (loggedInRole === 'principal' || loggedInRole === 'teacher') && (
-                  <div className="bg-white text-slate-900 relative overflow-hidden flex flex-col min-h-[690px] w-full animate-fade-in">
+                  <div className="bg-white text-slate-900 relative overflow-hidden flex flex-col h-full flex-grow min-h-0 w-full animate-fade-in">
                     
                     {/* Faculty App Bar */}
                     <div className="bg-[#0b3294] text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md">
@@ -1713,7 +1755,7 @@ export default function App() {
                     </div>
 
                     {/* Main Admin Console Page */}
-                    <div className="flex-grow overflow-x-hidden p-4 md:p-6 bg-slate-50">
+                    <div className="flex-grow overflow-x-hidden p-4 md:p-6 bg-slate-50 min-h-0 flex flex-col">
                       <AdminPanel
                         students={students}
                         setStudents={setStudents}
@@ -1735,7 +1777,7 @@ export default function App() {
                 {activeTab === 'parent' && loggedInRole === 'parent' && (() => {
                   const loggedInStudent = students.find(s => s.id === loggedInParentStudentId) || students[0];
                   return (
-                    <div className="bg-white text-slate-900 relative overflow-hidden flex flex-col min-h-[690px] w-full animate-fade-in">
+                    <div className="bg-white text-slate-900 relative overflow-hidden flex flex-col h-full flex-grow min-h-0 w-full animate-fade-in">
                       
                       {/* Parent App Bar */}
                       <div className="bg-slate-900 text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md">
@@ -1763,7 +1805,7 @@ export default function App() {
                       </div>
 
                       {/* Parent Application container */}
-                      <div className="flex-grow bg-slate-50">
+                      <div className="flex-grow min-h-0 relative bg-slate-50 flex flex-col">
                         <ParentApp
                           students={students}
                           setStudents={setStudents}
@@ -1784,7 +1826,7 @@ export default function App() {
                 })()}
 
                 {activeTab === 'gate' && loggedInRole === 'gate' && (
-                  <div className="bg-white text-slate-100 relative overflow-hidden flex flex-col min-h-[690px] w-full animate-fade-in">
+                  <div className="bg-white text-slate-100 relative overflow-hidden flex flex-col h-full flex-grow min-h-0 w-full animate-fade-in">
                     
                     {/* Gate Terminal Bar */}
                     <div className="bg-slate-950 text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md border-b border-slate-900">
@@ -1812,7 +1854,7 @@ export default function App() {
                     </div>
 
                     {/* Gate Security core application screen */}
-                    <div className="flex-grow bg-slate-900 text-slate-100">
+                    <div className="flex-grow min-h-0 relative flex flex-col bg-slate-900 text-slate-100">
                       <SecurityDashboard
                         students={students}
                         pickupRequests={pickupRequests}

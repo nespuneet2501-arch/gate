@@ -956,13 +956,22 @@ export default function ParentApp({
 
                   </div>
 
-                  <button
-                    id="btn-submit-pickup"
-                    type="submit"
-                    className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2.5 rounded-xl text-xs transition duration-300 shadow-sm uppercase tracking-wider"
-                  >
-                    Submit Clearance Request
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setActiveScreen('dashboard')}
+                      className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition duration-300 uppercase tracking-wider cursor-pointer"
+                    >
+                      Back
+                    </button>
+                    <button
+                      id="btn-submit-pickup"
+                      type="submit"
+                      className="flex-grow bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2.5 rounded-xl text-xs transition duration-300 shadow-sm uppercase tracking-wider cursor-pointer"
+                    >
+                      Submit Clearance Request
+                    </button>
+                  </div>
 
                 </form>
               )}
@@ -1069,6 +1078,15 @@ export default function ParentApp({
                           </div>
                       ))
                     )}
+                  </div>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveScreen('dashboard')}
+                      className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-xl text-xs transition duration-300 uppercase tracking-wider cursor-pointer"
+                    >
+                      Back to Home
+                    </button>
                   </div>
                 </div>
               )}
@@ -1270,13 +1288,22 @@ export default function ParentApp({
                       </div>
                     </div>
 
-                  <button
-                    id="btn-save-parent-profile-settings"
-                    type="submit"
-                    className="w-full bg-emerald-750 hover:bg-emerald-800 text-white font-bold py-2.5 rounded-xl text-xs transition duration-300 shadow-sm"
-                  >
-                    Save Changes
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setActiveScreen('dashboard')}
+                      className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition duration-300 uppercase tracking-wider cursor-pointer"
+                    >
+                      Back
+                    </button>
+                    <button
+                      id="btn-save-parent-profile-settings"
+                      type="submit"
+                      className="flex-grow bg-emerald-700 hover:bg-emerald-850 text-white font-bold py-2.5 rounded-xl text-xs transition duration-300 shadow-sm cursor-pointer"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
 
                 </form>
               )}
