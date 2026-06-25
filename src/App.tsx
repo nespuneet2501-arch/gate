@@ -78,11 +78,7 @@ export default function App() {
   });
   const [sheetsErrorMsg, setSheetsErrorMsg] = useState<string>('');
 
-  const [databaseMode, setDatabaseMode] = useState<'local' | 'sheets' | 'firebase'>(() => {
-    const savedMode = localStorage.getItem('goenka_database_mode');
-    if (savedMode === 'local' || savedMode === 'sheets' || savedMode === 'firebase') return savedMode;
-    return 'firebase'; // Default to Firestore Cloud DB for the best cloud-synchronized experience!
-  });
+  const [databaseMode, setDatabaseMode] = useState<'local' | 'sheets' | 'firebase'>('firebase');
 
   useEffect(() => {
     localStorage.setItem('goenka_database_mode', databaseMode);
@@ -1235,6 +1231,8 @@ export default function App() {
                     setPickupRequests={setPickupRequests}
                     addNotification={addNotification}
                     addEmail={addEmail}
+                    notifications={notifications}
+                    emailLogs={emailLogs}
                   />
                 </div>
               </div>
@@ -1451,41 +1449,11 @@ export default function App() {
                 )}
               </div>
 
-              {/* Database Mode Switcher Selector */}
-              <div id="db-mode-selector" className="grid grid-cols-3 bg-slate-950 p-1 rounded-xl border border-slate-850/80 mb-4 text-center select-none">
-                <button
-                  id="btn-mode-firebase"
-                  onClick={() => setDatabaseMode('firebase')}
-                  className={`py-1.5 px-2 rounded-lg text-[10px] font-extrabold transition-all duration-150 cursor-pointer ${
-                    databaseMode === 'firebase' 
-                      ? 'bg-amber-950/30 text-amber-400 shadow-sm border border-amber-800/15' 
-                      : 'text-slate-450 hover:text-slate-205'
-                  }`}
-                >
-                  🔥 Firestore Cloud
-                </button>
-                <button
-                  id="btn-mode-local"
-                  onClick={() => setDatabaseMode('local')}
-                  className={`py-1.5 px-2 rounded-lg text-[10px] font-extrabold transition-all duration-150 cursor-pointer ${
-                    databaseMode === 'local' 
-                      ? 'bg-emerald-950/30 text-emerald-450 shadow-sm border border-emerald-800/15' 
-                      : 'text-slate-450 hover:text-slate-205'
-                  }`}
-                >
-                  🔒 Local Sandbox
-                </button>
-                <button
-                  id="btn-mode-sheets"
-                  onClick={() => setDatabaseMode('sheets')}
-                  className={`py-1.5 px-2 rounded-lg text-[10px] font-extrabold transition-all duration-150 cursor-pointer ${
-                    databaseMode === 'sheets' 
-                      ? 'bg-emerald-950/30 text-emerald-450 shadow-sm border border-emerald-800/15' 
-                      : 'text-slate-450 hover:text-slate-205'
-                  }`}
-                >
-                  📊 Sheets Sync
-                </button>
+              {/* Database Mode Indicator */}
+              <div id="db-mode-selector" className="bg-slate-950 p-2.5 rounded-xl border border-slate-850/80 mb-4 text-center select-none">
+                <span className="text-[10.5px] font-extrabold text-amber-400 flex items-center justify-center gap-1.5">
+                  🔥 Google Cloud Firestore Connection Active
+                </span>
               </div>
 
               {databaseMode === 'firebase' ? (
