@@ -5,7 +5,66 @@ import {
   Trash2, Shield, ArrowDownToLine, RefreshCw, AlertCircle, CheckCircle, FileText,
   CloudLightning, Database, Copy, Check
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { sampleExcelCSVData, svgAvatars } from '../mockData';
+import { CustomDialog, DialogType } from './CustomDialog';
+import { CsvColumnMapper } from './CsvColumnMapper';
+
+// Downscale images to avoid exceeding Firestore 1MB document size limit
+const downscaleImage = (base64Str: string, maxWidth = 300, maxHeight = 300): Promise<string> => {
+  return new Promise((resolve) => {
+    if (!base64Str || base64Str.startsWith('data:image/svg+xml')) {
+      resolve(base64Str);
+      return;
+    }
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        // Compress as JPEG to keep size extremely small (e.g. 10-25KB)
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      } else {
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+};
+
+const formatRequestTime = (isoString: string) => {
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return { time: 'Unknown Time', date: 'Unknown Date' };
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateStr = d.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
+    return { time: timeStr, date: dateStr };
+  } catch (e) {
+    return { time: 'Unknown Time', date: 'Unknown Date' };
+  }
+};
 
 interface AdminPanelProps {
   students: Student[];
@@ -18,6 +77,8 @@ interface AdminPanelProps {
   addEmail: (to: string, subject: string, body: string) => void;
   notifications?: any[];
   emailLogs?: any[];
+  onWipeDatabase?: (collections?: string[]) => void;
+  onDeleteStudents?: (ids: string[]) => void;
 }
 
 export default function AdminPanel({
@@ -30,12 +91,67 @@ export default function AdminPanel({
   addNotification,
   addEmail,
   notifications = [],
-  emailLogs = []
+  emailLogs = [],
+  onWipeDatabase,
+  onDeleteStudents
 }: AdminPanelProps) {
   // Tabs: 'students' | 'logs' | 'new_pickups' | 'config' | 'db_stats'
   const [activeSubTab, setActiveSubTab] = useState<'students' | 'logs' | 'new_pickups' | 'config' | 'db_stats'>('students');
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setLastRefreshed(new Date());
+      setIsRefreshing(false);
+    }, 850);
+  };
+
   const [sqlCopied, setSqlCopied] = useState(false);
   const [pingStatus, setPingStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [selectedWipeKeys, setSelectedWipeKeys] = useState<string[]>([]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
+
+  // Custom Dialog System State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: DialogType;
+    confirmText?: string;
+    cancelText?: string;
+    requireValidationText?: string;
+    validationPlaceholder?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: () => {},
+  });
+
+  const showDialog = (config: {
+    title: string;
+    message: string;
+    type: DialogType;
+    confirmText?: string;
+    cancelText?: string;
+    requireValidationText?: string;
+    validationPlaceholder?: string;
+    onConfirm: () => void;
+  }) => {
+    setDialogState({
+      isOpen: true,
+      ...config
+    });
+  };
+
+  const closeDialog = () => {
+    setDialogState(prev => ({ ...prev, isOpen: false }));
+  };
 
   const downloadCollection = (collectionName: string) => {
     let headers: string[] = [];
@@ -207,85 +323,124 @@ export default function AdminPanel({
   // File drag-and-drop feedback
   const [isDragging, setIsDragging] = useState(false);
 
-  // Parse CSV string into students
-  const handleParseCSV = (text: string) => {
+  // Csv Mapper states
+  const [mapperOpen, setMapperOpen] = useState(false);
+  const [mapperHeaders, setMapperHeaders] = useState<string[]>([]);
+  const [mapperRows, setMapperRows] = useState<string[][]>([]);
+
+  // Parse Excel spreadsheet or CSV string into students with high-precision SheetJS
+  const handleParseCSV = (dataInput: string | ArrayBuffer) => {
     try {
-      const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-      if (lines.length < 2) {
-        throw new Error('CSV must contain a header and at least one data row.');
+      let workbook;
+      if (typeof dataInput === 'string') {
+        workbook = XLSX.read(dataInput, { type: 'string' });
+      } else {
+        const data = new Uint8Array(dataInput);
+        workbook = XLSX.read(data, { type: 'array' });
       }
+      
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rawSheetData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: '' });
+      
+      if (rawSheetData.length < 2) {
+        throw new Error('Spreadsheet must contain a header row and at least one data row.');
+      }
+      
+      // Find first row that has values to use as header, in case of empty preceding rows
+      let headerRowIdx = 0;
+      while (headerRowIdx < rawSheetData.length && (!rawSheetData[headerRowIdx] || rawSheetData[headerRowIdx].filter(x => x !== '').length === 0)) {
+        headerRowIdx++;
+      }
+      
+      if (headerRowIdx >= rawSheetData.length) {
+        throw new Error('Could not find any headers or data rows in the spreadsheet.');
+      }
+      
+      // Clean headers and ensure they are strings
+      const rawHeaders = rawSheetData[headerRowIdx].map((h: any) => String(h).trim());
+      
+      // Completely remove control characters and replacement boxes (like \uFFFD) to keep data absolutely pristine
+      const sanitizeValue = (val: string): string => {
+        if (!val) return '';
+        return val
+          .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uFFFD]/g, "")
+          .trim()
+          .replace(/^"|"$/g, "") // strip leading/trailing quotes if they survived
+          .trim();
+      };
 
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const newStudents: Student[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const currentLine = lines[i];
-        // simple CSV parsing handling comma
-        const values = currentLine.split(',').map(v => v.trim());
+      const parsedRows: string[][] = [];
+      for (let i = headerRowIdx + 1; i < rawSheetData.length; i++) {
+        const row = rawSheetData[i];
+        if (!row || row.length === 0) continue;
         
-        // Find columns
-        const stuId = values[0] || `STU${Math.floor(1000 + Math.random() * 9000)}`;
-        const admNum = values[1] || `ADM${Date.now().toString().slice(-6)}${i}`;
-        const name = values[2] || 'Unknown Student';
-        const className = values[3] || 'Class 1';
-        const section = values[4] || 'Section A';
-        const dob = values[5] || '2018-01-01';
-        const address = values[6] || 'School Campus';
-        const fatherName = values[7] || 'Father';
-        const motherName = values[8] || 'Mother';
-        const fatherEmail = values[9] || 'father@example.com';
-        const motherEmail = values[10] || 'mother@example.com';
-        const fatherMobile = values[11] || '+91 99999 99999';
-        const motherMobile = values[12] || '+91 99999 88888';
-
-        // Custom default avatars for newly imported students
-        const idHash = stuId.charCodeAt(stuId.length - 1) || 0;
-        const studentHue = (idHash * 40) % 360;
-        const parentHue = (idHash * 85) % 360;
-        
-        const customStudentPhoto = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><circle cx="50" cy="50" r="50" fill="hsl(${studentHue}, 80%, 93%)"/><circle cx="50" cy="40" r="21" fill="hsl(${studentHue}, 80%, 40%)"/><path d="M16 85 C 22 62, 78 62, 84 85 Z" fill="hsl(${studentHue}, 80%, 30%)"/><circle cx="43" cy="38" r="3" fill="white"/><circle cx="57" cy="38" r="3" fill="white"/><path d="M44 50 Q50 54 56 50" stroke="white" stroke-width="2.5" fill="none"/></svg>`;
-        const customFatherPhoto = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><circle cx="50" cy="50" r="50" fill="hsl(${parentHue}, 70%, 95%)"/><circle cx="50" cy="38" r="20" fill="hsl(${parentHue}, 70%, 35%)"/><path d="M18 82 C 22 58, 78 58, 82 82 Z" fill="hsl(${parentHue}, 70%, 25%)"/><path d="M40 38 L45 38" stroke="white" stroke-width="2"/><path d="M55 38 L60 38" stroke="white" stroke-width="2"/><path d="M45 48 Q50 52 55 48" stroke="white" stroke-width="2" fill="none"/></svg>`;
-        const customMotherPhoto = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><circle cx="50" cy="50" r="50" fill="hsl(${(parentHue + 120) % 360}, 70%, 95%)"/><circle cx="50" cy="38" r="18" fill="hsl(${(parentHue + 120) % 360}, 70%, 45%)"/><path d="M20 84 C 24 60, 76 60, 80 84 Z" fill="hsl(${(parentHue + 120) % 360}, 70%, 35%)"/><circle cx="43" cy="36" r="2.5" fill="white"/><circle cx="57" cy="36" r="2.5" fill="white"/><path d="M42 46 Q50 51 58 46" stroke="white" stroke-width="2" fill="none"/><path d="M35 34 C 40 20, 60 20, 65 34 Z" fill="hsl(${(parentHue + 120) % 360}, 70%, 15%)"/></svg>`;
-
-        newStudents.push({
-          id: stuId,
-          admissionNumber: admNum,
-          name,
-          className,
-          section,
-          dob,
-          address,
-          photo: customStudentPhoto,
-          fatherName,
-          motherName,
-          fatherEmail,
-          motherEmail,
-          fatherMobile,
-          motherMobile,
-          fatherPhoto: customFatherPhoto,
-          motherPhoto: customMotherPhoto
+        // Map all cells to clean sanitized string format
+        const stringCells = row.map((cell: any) => {
+          if (cell === null || cell === undefined) return '';
+          return sanitizeValue(String(cell));
         });
+        
+        // Skip empty row or row with single item
+        const nonCount = stringCells.filter(v => v.length > 0).length;
+        if (nonCount <= 1) continue;
+        
+        parsedRows.push(stringCells);
       }
+      
+      if (parsedRows.length === 0) {
+        throw new Error('Could not parse any valid student records from the spreadsheet.');
+      }
+      
+      setMapperHeaders(rawHeaders);
+      setMapperRows(parsedRows);
+      setMapperOpen(true);
+      setCsvError('');
+      setCsvSuccess('');
+    } catch (err: any) {
+      setCsvError(err.message || 'Error processing file. Please ensure it is a valid .xlsx, .xls or .csv file.');
+      setCsvSuccess('');
+    }
+  };
 
-      setStudents(prev => {
-        // filter out matches or just combine
-        const existingIds = new Set(prev.map(s => s.id));
-        const filteredNew = newStudents.filter(s => !existingIds.has(s.id));
-        return [...prev, ...filteredNew];
-      });
+  const handleMapperConfirm = (mappedStudents: Student[]) => {
+    setMapperOpen(false);
 
-      setCsvSuccess(`Successfully imported ${newStudents.length} students. Parent accounts generated automatically.`);
+    const finalizeImport = (studentList: Student[]) => {
+      setCsvSuccess(`Successfully processed ${studentList.length} student profiles. Parent accounts configured automatically.`);
       setCsvError('');
       setCsvText('');
 
       addNotification(
         "Student Database Updated", 
-        `Imported ${newStudents.length} new student records from Excel. Parent credentials created.`, 
+        `Successfully imported ${studentList.length} records in ${importMode === 'replace' ? 'overwrite' : 'append'} mode.`, 
         'system'
       );
-    } catch (err: any) {
-      setCsvError(err.message || 'Invalid CSV file format.');
-      setCsvSuccess('');
+    };
+
+    if (importMode === 'replace') {
+      showDialog({
+        title: "Confirm Live Database Overwrite",
+        message: `This will permanently delete ALL existing student profiles from both your Live Cloud Database and local sandbox cache, replacing them with the ${mappedStudents.length} records in this file. This action is IRREVERSIBLE.\n\nAre you absolutely sure you want to proceed?`,
+        type: 'danger',
+        confirmText: 'Wipe & Overwrite Live Data',
+        cancelText: 'Cancel Overwrite',
+        onConfirm: () => {
+          closeDialog();
+          if (onWipeDatabase) {
+            onWipeDatabase(['students']);
+          }
+          setStudents(mappedStudents);
+          finalizeImport(mappedStudents);
+        }
+      });
+    } else {
+      setStudents(prev => {
+        const existingIds = new Set(prev.map(s => s.id));
+        const filteredNew = mappedStudents.filter(s => !existingIds.has(s.id));
+        return [...prev, ...filteredNew];
+      });
+      finalizeImport(mappedStudents);
     }
   };
 
@@ -306,12 +461,12 @@ export default function AdminPanel({
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const text = event.target?.result as string;
-        if (text) {
-          handleParseCSV(text);
+        const buffer = event.target?.result as ArrayBuffer;
+        if (buffer) {
+          handleParseCSV(buffer);
         }
       };
-      reader.readAsText(file);
+      reader.readAsArrayBuffer(file);
     }
   };
 
@@ -321,12 +476,12 @@ export default function AdminPanel({
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const text = event.target?.result as string;
-        if (text) {
-          handleParseCSV(text);
+        const buffer = event.target?.result as ArrayBuffer;
+        if (buffer) {
+          handleParseCSV(buffer);
         }
       };
-      reader.readAsText(file);
+      reader.readAsArrayBuffer(file);
     }
   };
 
@@ -347,7 +502,9 @@ export default function AdminPanel({
       reader.onload = (evt) => {
         const base64 = evt.target?.result as string;
         if (base64) {
-          setStudentForm(prev => ({ ...prev, [target]: base64 }));
+          downscaleImage(base64).then(scaled => {
+            setStudentForm(prev => ({ ...prev, [target]: scaled }));
+          });
         }
       };
       reader.readAsDataURL(file);
@@ -377,10 +534,32 @@ export default function AdminPanel({
 
   // Delete student record
   const handleDeleteStudent = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete student ${name}? This will revoke parent access.`)) {
-      setStudents(prev => prev.filter(s => s.id !== id));
-      addNotification("Record Deleted", `Removed student record & linked parents for ${name}.`, "system");
-    }
+    showDialog({
+      title: "Confirm Profile Deletion",
+      message: `Are you sure you want to permanently delete student ${name}? This will immediately revoke parent portal access and clear associated student cached parameters from both cloud databases and local state.`,
+      type: 'danger',
+      confirmText: 'Delete Student',
+      cancelText: 'Keep Student',
+      onConfirm: () => {
+        closeDialog();
+        if (onDeleteStudents) {
+          onDeleteStudents([id]);
+        } else {
+          setStudents(prev => prev.filter(s => s.id !== id));
+        }
+        addNotification("Record Deleted", `Removed student record & linked parents for ${name}.`, "system");
+        
+        // Show success confirmation
+        setTimeout(() => {
+          showDialog({
+            title: "Student Deleted",
+            message: `Successfully deleted student ${name} from both the Cloud database and client caches.`,
+            type: 'success',
+            onConfirm: closeDialog
+          });
+        }, 300);
+      }
+    });
   };
 
   // Export Log CSV
@@ -429,6 +608,23 @@ export default function AdminPanel({
         <p className="text-slate-400 text-sm mt-1 max-w-2xl">
           Import pupils, manage parents, verify logs, authorize audit updates, and track daily safe dispersal stats.
         </p>
+
+        {/* Live Data Refresh Indicators */}
+        <div className="mt-4 flex flex-wrap items-center gap-4 bg-slate-800/40 p-3.5 rounded-lg border border-slate-700/40 max-w-xl">
+          <div className="flex items-center gap-2">
+            <RefreshCw size={14} className={`text-emerald-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="text-xs text-slate-300 font-medium">
+              Data Last Refreshed: <strong className="text-white font-bold">{lastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</strong>
+            </span>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 active:scale-95 shrink-0"
+          >
+            {isRefreshing ? 'Refreshing...' : 'Refresh Live Data'}
+          </button>
+        </div>
       </div>
 
       {/* Sub Tabs Navigation */}
@@ -529,12 +725,12 @@ export default function AdminPanel({
               <input 
                 id="excel-file-upload-input"
                 type="file" 
-                accept=".csv" 
+                accept=".csv, .xlsx, .xls" 
                 onChange={handleFileChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
               <Upload className="mx-auto text-slate-400 mb-2" size={32} />
-              <p className="text-sm font-semibold text-slate-900">Drag & Drop Excel CSV</p>
+              <p className="text-sm font-semibold text-slate-900">Drag & Drop Excel or CSV</p>
               <p className="text-xs text-slate-400 mt-1">or click to browse your desktop files</p>
             </div>
 
@@ -557,10 +753,45 @@ export default function AdminPanel({
               </button>
             </div>
 
+            {/* Import Mode Selection */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 space-y-2">
+              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Import Mode Selection:</div>
+              <div className="flex flex-col gap-2.5">
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                  <input
+                    type="radio"
+                    name="importMode"
+                    value="append"
+                    checked={importMode === 'append'}
+                    onChange={() => setImportMode('append')}
+                    className="text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                  />
+                  <div className="flex flex-col">
+                    <span>Keep Old Data & Append</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Checks for and keeps existing profiles, adding new ones</span>
+                  </div>
+                </label>
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                  <input
+                    type="radio"
+                    name="importMode"
+                    value="replace"
+                    checked={importMode === 'replace'}
+                    onChange={() => setImportMode('replace')}
+                    className="text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-rose-700 font-bold">Wipe & Overwrite Table</span>
+                    <span className="text-[10px] text-rose-500 font-normal">Wipes all current pupil records, replacing with this file</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             {showCsvHelp && (
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-[11px] font-mono whitespace-pre-wrap max-h-40 overflow-y-auto text-slate-700">
                 <strong>Headers Required:</strong><br />
-                Student ID, Admission Number, Student Name, Class, Section, Date of Birth, Address, Father Name, Mother Name, Father Email, Mother Email, Father Mobile, Mother Mobile
+                Admission Number, Student Name, Class, Section, Date of Birth, Address, Father Name, Mother Name, Father Email, Mother Email, Father Mobile, Mother Mobile
               </div>
             )}
 
@@ -620,6 +851,81 @@ export default function AdminPanel({
                 ))}
               </div>
             </div>
+
+            {/* Danger Zone */}
+            {onWipeDatabase && (
+              <div className="border border-rose-200 bg-rose-50/50 rounded-xl p-4.5 space-y-3.5 animate-fade-in">
+                <h4 className="text-xs font-bold font-display text-rose-800 flex items-center gap-1.5">
+                  <AlertCircle size={14} className="text-rose-600" />
+                  <span>Selective Database Purge</span>
+                </h4>
+                <p className="text-[11px] text-rose-700 leading-normal">
+                  If spreadsheet columns or imported values are incorrect, choose specific tables below to purge. <strong>This action clears only live records, not table schemas.</strong>
+                </p>
+
+                <div className="space-y-1.5 pt-1">
+                  {[
+                    { key: 'students', label: 'Pupil Directory (Students)', count: students.length },
+                    { key: 'pickupRequests', label: 'Gate Passes / Requests', count: pickupRequests.length },
+                    { key: 'securityLogs', label: 'Handover Security Logs', count: securityLogs.length },
+                    { key: 'notifications', label: 'App Notifications / Alerts', count: notifications?.length || 0 },
+                    { key: 'emailLogs', label: 'Email Dispatch History', count: emailLogs?.length || 0 },
+                  ].map((item) => (
+                    <label key={item.key} className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 hover:text-slate-900 font-medium select-none">
+                      <input
+                        type="checkbox"
+                        checked={selectedWipeKeys.includes(item.key)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedWipeKeys(prev => [...prev, item.key]);
+                          } else {
+                            setSelectedWipeKeys(prev => prev.filter(k => k !== item.key));
+                          }
+                        }}
+                        className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-3.5 h-3.5 cursor-pointer"
+                      />
+                      <span className="flex-grow text-[11px]">{item.label}</span>
+                      <span className="text-[10px] font-mono text-slate-500 bg-slate-200/50 px-1.5 py-0.2 rounded font-bold">
+                        {item.count} rows
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 justify-between items-center text-[10px] pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedWipeKeys.length === 5) {
+                        setSelectedWipeKeys([]);
+                      } else {
+                        setSelectedWipeKeys(['students', 'pickupRequests', 'securityLogs', 'notifications', 'emailLogs']);
+                      }
+                    }}
+                    className="text-rose-800 hover:underline font-extrabold cursor-pointer"
+                  >
+                    {selectedWipeKeys.length === 5 ? 'Deselect All' : 'Select All Categories'}
+                  </button>
+                  
+                  {selectedWipeKeys.length > 0 && (
+                    <span className="text-[10px] text-rose-700 font-bold">
+                      {selectedWipeKeys.length} chosen
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  id="btn-wipe-database-quick"
+                  disabled={selectedWipeKeys.length === 0}
+                  onClick={() => onWipeDatabase(selectedWipeKeys)}
+                  className="w-full bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs py-2 font-bold rounded-lg transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 size={13} />
+                  Purge Selected Data
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Student Grid / Search */}
@@ -676,6 +982,90 @@ export default function AdminPanel({
               />
             </div>
 
+            {/* Bulk Selection Toolbar */}
+            {filteredStudents.length > 0 && (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs animate-fade-in">
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={filteredStudents.length > 0 && filteredStudents.every(s => selectedStudentIds.includes(s.id))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const allIds = filteredStudents.map(s => s.id);
+                          setSelectedStudentIds(prev => Array.from(new Set([...prev, ...allIds])));
+                        } else {
+                          const allIds = filteredStudents.map(s => s.id);
+                          setSelectedStudentIds(prev => prev.filter(id => !allIds.includes(id)));
+                        }
+                      }}
+                      className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer"
+                    />
+                    <span>Select All Filtered ({filteredStudents.length})</span>
+                  </label>
+                  
+                  {selectedStudentIds.length > 0 && (
+                    <span className="text-rose-700 font-extrabold bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-rose-600 rounded-full animate-ping" />
+                      <span>{selectedStudentIds.length} Selected Records</span>
+                    </span>
+                  )}
+                </div>
+
+                {selectedStudentIds.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      id="btn-delete-selected-records"
+                      onClick={() => {
+                        showDialog({
+                          title: "Confirm Bulk Deletion",
+                          message: `You are about to permanently delete the ${selectedStudentIds.length} selected student records from both the Live Cloud Database and local sandbox storage. This will revoke parent logins and is IRREVERSIBLE.`,
+                          type: 'danger',
+                          confirmText: 'Delete Selected Records',
+                          cancelText: 'Keep Records',
+                          requireValidationText: 'OK',
+                          validationPlaceholder: 'Type "OK" to authorize',
+                          onConfirm: () => {
+                            closeDialog();
+                            if (onDeleteStudents) {
+                              onDeleteStudents(selectedStudentIds);
+                            } else {
+                              setStudents(prev => prev.filter(s => !selectedStudentIds.includes(s.id)));
+                            }
+                            addNotification("Bulk Deletion", `Permanently removed ${selectedStudentIds.length} selected student records.`, "system");
+                            setSelectedStudentIds([]);
+                            
+                            // Success Feedback Dialog
+                            setTimeout(() => {
+                              showDialog({
+                                title: "Bulk Deletion Complete",
+                                message: `Successfully deleted selected student profiles and revoked parent portal access keys.`,
+                                type: 'success',
+                                onConfirm: closeDialog
+                              });
+                            }, 300);
+                          }
+                        });
+                      }}
+                      className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+                    >
+                      <Trash2 size={13} />
+                      Delete Selected Records
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStudentIds([])}
+                      className="text-slate-500 hover:text-slate-800 font-semibold px-2 py-1 hover:underline cursor-pointer"
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Student list */}
             {filteredStudents.length === 0 ? (
               <div className="text-center py-12 text-slate-500 border border-dashed border-slate-200 rounded-lg">
@@ -687,9 +1077,29 @@ export default function AdminPanel({
                 {filteredStudents.map(student => (
                   <div 
                     key={student.id} 
-                    className="border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 p-4 rounded-xl flex flex-col justify-between transition group shadow-xs"
+                    className={`border p-4 rounded-xl flex flex-col justify-between transition group shadow-xs ${
+                      selectedStudentIds.includes(student.id)
+                        ? 'border-rose-300 bg-rose-50/20'
+                        : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200'
+                    }`}
                   >
                     <div className="flex gap-3">
+                      {/* Checkbox for selection */}
+                      <div className="flex items-start pt-1.5 shrink-0">
+                        <input 
+                          type="checkbox"
+                          checked={selectedStudentIds.includes(student.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedStudentIds(prev => [...prev, student.id]);
+                            } else {
+                              setSelectedStudentIds(prev => prev.filter(id => id !== student.id));
+                            }
+                          }}
+                          className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer"
+                        />
+                      </div>
+
                       <div className="w-14 h-14 bg-white rounded-lg overflow-hidden border border-slate-200 shrink-0 flex items-center justify-center">
                         <img 
                           referrerPolicy="no-referrer" 
@@ -1033,6 +1443,25 @@ export default function AdminPanel({
                 </div>
               </div>
 
+              {/* Parent Access & Block Toggles */}
+              <div className="sm:col-span-2 space-y-2.5 bg-rose-50/55 p-4 rounded-xl border border-rose-100 mt-2 text-left">
+                <span className="text-[11px] font-bold text-rose-800 uppercase tracking-widest block">Guardians Permissions & Access Control</span>
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={studentForm.isParentBlocked || false}
+                    onChange={(e) => setStudentForm(prev => ({ ...prev, isParentBlocked: e.target.checked }))}
+                    className="mt-0.5 w-4 h-4 text-rose-600 bg-white border-slate-300 rounded focus:ring-rose-500 cursor-pointer shrink-0"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block">Block Parent's Data Change Privileges</span>
+                    <span className="text-[10px] text-slate-500 block leading-tight">
+                      When enabled, this parent cannot update photographs, modify emergency contact info, or create temporary delegate pickup codes.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
             </div>
 
           </div>
@@ -1189,34 +1618,49 @@ export default function AdminPanel({
                 No active temporary pickup approvals generated in the last 24 hours.
               </div>
             ) : (
-              [...pickupRequests].reverse().map(req => {
-                const student = students.find(s => s.id === req.studentId);
-                return (
-                  <div 
-                    key={req.id} 
-                    className="border border-slate-200 bg-slate-50/40 p-5 rounded-xl grid grid-cols-1 md:grid-cols-4 gap-4 items-center hover:border-slate-300 transition"
-                  >
-                    
-                    {/* Delegation details */}
-                    <div className="md:col-span-2 space-y-3">
-                      <div className="flex items-start gap-3">
-                        <img 
-                          referrerPolicy="no-referrer" 
-                          src={req.photograph} 
-                          alt={req.fullName} 
-                          className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0" 
-                        />
-                        <div className="space-y-0.5 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-slate-900 text-sm">{req.fullName}</span>
-                            <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full">
-                              {req.relationship}
-                            </span>
+              [...pickupRequests]
+                .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                .map(req => {
+                  const student = students.find(s => s.id === req.studentId);
+                  return (
+                    <div 
+                      key={req.id} 
+                      className="border border-slate-200 bg-slate-50/40 p-5 rounded-xl grid grid-cols-1 md:grid-cols-4 gap-4 items-center hover:border-slate-300 transition"
+                    >
+                      
+                      {/* Delegation details */}
+                      <div className="md:col-span-2 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <img 
+                            referrerPolicy="no-referrer" 
+                            src={req.photograph} 
+                            alt={req.fullName} 
+                            className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0" 
+                          />
+                          <div className="space-y-0.5 min-w-0 text-left">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-slate-900 text-sm">{req.fullName}</span>
+                              <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full">
+                                {req.relationship}
+                              </span>
+                              {(req.isDelegated || req.relationship === 'Unknown Person (Delegated)') && (
+                                <span className="text-[9px] font-black bg-amber-500/20 text-amber-955 px-2 py-0.5 rounded border border-amber-500/30">
+                                  DELEGATED (UNKNOWN PERSON)
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-600 font-medium">Age: {req.age} • Mob: {req.mobileNumber}</div>
+                            <div className="text-[11px] text-slate-400">Aadhaar: {req.aadhaarNumber}</div>
+                            {req.createdAt && (() => {
+                              const reqTime = formatRequestTime(req.createdAt);
+                              return (
+                                <div className="text-[10.5px] text-slate-500 mt-1">
+                                  Sent: <strong className="text-slate-800 font-extrabold">{reqTime.time}</strong> on <strong className="text-slate-800 font-extrabold">{reqTime.date}</strong>
+                                </div>
+                              );
+                            })()}
                           </div>
-                          <div className="text-xs text-slate-600 font-medium">Age: {req.age} • Mob: {req.mobileNumber}</div>
-                          <div className="text-[11px] text-slate-400">Aadhaar: {req.aadhaarNumber}</div>
                         </div>
-                      </div>
 
                       {req.notes && (
                         <div className="bg-white p-2.5 rounded-lg border border-slate-100 text-xs text-slate-600 italic">
@@ -1448,11 +1892,24 @@ export default function AdminPanel({
               <button
                 type="button"
                 onClick={downloadAllCollections}
-                className="bg-amber-500 hover:bg-amber-600 hover:scale-[1.01] active:scale-[0.99] transition text-slate-950 px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-sm cursor-pointer animate-pulse"
+                className="bg-amber-500 hover:bg-amber-600 hover:scale-[1.01] active:scale-[0.99] transition text-slate-950 px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-sm cursor-pointer"
               >
                 <ArrowDownToLine size={14} />
                 Download All Tables (Spreadsheet Pack)
               </button>
+
+              {onWipeDatabase && (
+                <button
+                  type="button"
+                  id="btn-wipe-database-action"
+                  disabled={selectedWipeKeys.length === 0}
+                  onClick={() => onWipeDatabase(selectedWipeKeys)}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.99] transition text-white px-5 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-md border border-red-500/20 cursor-pointer"
+                >
+                  <Trash2 size={14} />
+                  Purge Selected Data ({selectedWipeKeys.length})
+                </button>
+              )}
             </div>
           </div>
 
@@ -1783,6 +2240,29 @@ export default function AdminPanel({
           </div>
         </div>
       )}
+
+      {/* Reusable non-native custom dialog */}
+      <CustomDialog
+        isOpen={dialogState.isOpen}
+        title={dialogState.title}
+        message={dialogState.message}
+        type={dialogState.type}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        requireValidationText={dialogState.requireValidationText}
+        validationPlaceholder={dialogState.validationPlaceholder}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
+
+      {/* Interactive Csv Column Matching workspace */}
+      <CsvColumnMapper
+        isOpen={mapperOpen}
+        csvHeaders={mapperHeaders}
+        csvRows={mapperRows}
+        onConfirm={handleMapperConfirm}
+        onCancel={() => setMapperOpen(false)}
+      />
 
     </div>
   );

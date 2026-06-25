@@ -8,6 +8,63 @@ import {
 } from 'lucide-react';
 import { svgAvatars } from '../mockData';
 
+// Downscale images to avoid exceeding Firestore 1MB document size limit
+const downscaleImage = (base64Str: string, maxWidth = 300, maxHeight = 300): Promise<string> => {
+  return new Promise((resolve) => {
+    // If it's a small placeholder or SVG avatar, return it as is
+    if (!base64Str || base64Str.startsWith('data:image/svg+xml')) {
+      resolve(base64Str);
+      return;
+    }
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        // Compress as JPEG to keep size extremely small (e.g. 10-25KB)
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      } else {
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+};
+
+const formatRequestTime = (isoString: string) => {
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return { time: 'Unknown Time', date: 'Unknown Date' };
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateStr = d.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
+    return { time: timeStr, date: dateStr };
+  } catch (e) {
+    return { time: 'Unknown Time', date: 'Unknown Date' };
+  }
+};
+
 interface ParentAppProps {
   students: Student[];
   setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
@@ -66,7 +123,7 @@ export default function ParentApp({
   const [primaryEmail, setPrimaryEmail] = useState('');
   const [primaryMobile, setPrimaryMobile] = useState('');
   const [photoUpdateMessage, setPhotoUpdateMessage] = useState('');
-  const [parentPassword, setParentPasswordInternal] = useState('student123');
+  const [parentPassword, setParentPasswordInternal] = useState('');
 
   // Load parent passwords on active student change
   useEffect(() => {
@@ -75,12 +132,12 @@ export default function ParentApp({
         const stored = localStorage.getItem('goenka_parent_passwords');
         if (stored) {
           const map = JSON.parse(stored);
-          setParentPasswordInternal(map[activeStudent.admissionNumber] || 'student123');
+          setParentPasswordInternal(map[activeStudent.admissionNumber] || activeStudent.admissionNumber);
         } else {
-          setParentPasswordInternal('student123');
+          setParentPasswordInternal(activeStudent.admissionNumber);
         }
       } catch (e) {
-        setParentPasswordInternal('student123');
+        setParentPasswordInternal(activeStudent.admissionNumber);
       }
     }
   }, [activeStudent]);
@@ -119,26 +176,32 @@ export default function ParentApp({
 
   // Handle Parent photo uploads
   const handleParentPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, role: 'father' | 'mother') => {
+    if (activeStudent?.isParentBlocked) {
+      alert("Error: Your parent data modification privileges are blocked by the school.");
+      return;
+    }
     const file = e.target.files?.[0];
     if (file && activeStudent) {
       const reader = new FileReader();
       reader.onload = (evt) => {
         const base64 = evt.target?.result as string;
         if (base64) {
-          // update in students database
-          setStudents(prev => prev.map(s => s.id === activeStudent.id ? {
-            ...s,
-            [role === 'father' ? 'fatherPhoto' : 'motherPhoto']: base64
-          } : s));
-          setPhotoUpdateMessage(`Successfully updated ${role}'s photograph.`);
-          setTimeout(() => setPhotoUpdateMessage(''), 3000);
+          downscaleImage(base64).then(scaled => {
+            // update in students database
+            setStudents(prev => prev.map(s => s.id === activeStudent.id ? {
+              ...s,
+              [role === 'father' ? 'fatherPhoto' : 'motherPhoto']: scaled
+            } : s));
+            setPhotoUpdateMessage(`Successfully updated ${role}'s photograph.`);
+            setTimeout(() => setPhotoUpdateMessage(''), 3000);
 
-          addNotification(
-            "Guardians Directory Updated", 
-            `Parent updated ${role === 'father' ? 'Father' : 'Mother'}'s digital ID photograph.`, 
-            'system',
-            activeStudent.id
-          );
+            addNotification(
+              "Guardians Directory Updated", 
+              `Parent updated ${role === 'father' ? 'Father' : 'Mother'}'s digital ID photograph.`, 
+              'system',
+              activeStudent.id
+            );
+          });
         }
       };
       reader.readAsDataURL(file);
@@ -148,12 +211,17 @@ export default function ParentApp({
   // Submit Authorize New Pickup Person
   const handleCreatePickupRequest = (e: React.FormEvent) => {
     e.preventDefault();
+    if (activeStudent?.isParentBlocked) {
+      alert("Error: Your parent delegation privileges are blocked by the school.");
+      return;
+    }
     if (!newPickupName || !newPickupMobile || !newPickupAadhaar) {
       alert("Please fill in Name, Mobile number, and Aadhaar card number.");
       return;
     }
 
     const requestId = `REQ${Math.floor(1000 + Math.random() * 9000)}`;
+    const isDelegated = newPickupRelationship === 'Unknown Person (Delegated)';
     const newRequest: PickupRequest = {
       id: requestId,
       studentId: activeStudent.id,
@@ -168,7 +236,8 @@ export default function ParentApp({
       notes: newPickupNotes,
       status: 'approved', // Pre-approved by parent on submission
       adminApproval: 'pending', // Sent directly to school for clearance
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      isDelegated: isDelegated
     };
 
     setPickupRequests(prev => [...prev, newRequest]);
@@ -179,6 +248,8 @@ export default function ParentApp({
     setNewPickupEmail('');
     setNewPickupAadhaar('');
     setNewPickupNotes('');
+    setNewPickupPhoto(svgAvatars.tempGuardian1);
+    setNewPickupAadhaarPhoto(svgAvatars.aadhaarPhoto);
 
     // Go back to dashboard to handle approval
     setActiveScreen('dashboard');
@@ -235,14 +306,20 @@ export default function ParentApp({
 
   // Read upload for temp photo / Aadhaar
   const handleTempFileRead = (e: React.ChangeEvent<HTMLInputElement>, field: 'photo' | 'aadhaar') => {
+    if (activeStudent?.isParentBlocked) {
+      alert("Error: Your parent delegation privileges are blocked by the school.");
+      return;
+    }
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (evt) => {
         const base64 = evt.target?.result as string;
         if (base64) {
-          if (field === 'photo') setNewPickupPhoto(base64);
-          else setNewPickupAadhaarPhoto(base64);
+          downscaleImage(base64).then(scaled => {
+            if (field === 'photo') setNewPickupPhoto(scaled);
+            else setNewPickupAadhaarPhoto(scaled);
+          });
         }
       };
       reader.readAsDataURL(file);
@@ -252,6 +329,10 @@ export default function ParentApp({
   // Save profile details
   const handleSaveContactConfig = (e: React.FormEvent) => {
     e.preventDefault();
+    if (activeStudent?.isParentBlocked) {
+      alert("Error: Your parent data modification privileges are blocked by the school.");
+      return;
+    }
     if (activeStudent) {
       setStudents(prev => prev.map(s => s.id === activeStudent.id ? {
         ...s,
@@ -392,6 +473,106 @@ export default function ParentApp({
                     </div>
                   </div>
 
+                  {/* Blocked Parent Alert Banner */}
+                  {activeStudent?.isParentBlocked && (
+                    <div className="bg-red-50 border-2 border-red-355 p-3.5 rounded-2xl flex items-start gap-3 text-red-900 shadow-sm animate-pulse">
+                      <AlertCircle className="text-red-750 shrink-0 mt-0.5" size={18} />
+                      <div className="text-left">
+                        <span className="text-xs font-black block">Permissions Suspended</span>
+                        <span className="text-[10px] text-slate-700 block mt-0.5 leading-snug">
+                          The school administration has blocked your portal's permission to submit emergency pickup delegation requests or change family records.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Parent Pickup Requests List at the Top (Sorted strictly by newest first!) */}
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Your Pickup Requests (Most Recent First)</h4>
+                      <span className="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">LIVE AUTO-SYNC</span>
+                    </div>
+
+                    {childRequests.length === 0 ? (
+                      <div className="text-center py-6 bg-white rounded-xl border border-dashed border-slate-200 text-xs text-slate-400 italic">
+                        No active or historic delegate pickup requests filed.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {[...childRequests]
+                          .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                          .map(req => {
+                            const reqTime = formatRequestTime(req.createdAt);
+                            return (
+                              <div 
+                                key={req.id} 
+                                className={`p-4 rounded-xl border ${
+                                  req.adminApproval === 'approved' 
+                                    ? 'bg-indigo-50/95 border-indigo-250 shadow-3xs' 
+                                    : req.adminApproval === 'rejected' 
+                                    ? 'bg-rose-50/90 border-rose-200' 
+                                    : 'bg-amber-50/80 border-amber-300'
+                                } space-y-2.5 text-left`}
+                              >
+                                <div className="flex justify-between items-start gap-2">
+                                  <div className="text-xs text-slate-700 leading-tight">
+                                    Request for <strong className="text-slate-900 font-extrabold">{req.fullName}</strong> ({req.relationship})
+                                    {req.isDelegated && (
+                                      <span className="ml-1.5 inline-block bg-amber-500/20 text-amber-955 text-[8.5px] font-black px-1.5 py-0.5 rounded uppercase border border-amber-500/30">
+                                        DELEGATED
+                                      </span>
+                                    )}
+                                    <div className="text-[10px] text-slate-500 mt-1.5">
+                                      Sent at <strong className="text-slate-800 font-extrabold">{reqTime.time}</strong> on <strong className="text-slate-800 font-extrabold">{reqTime.date}</strong>
+                                    </div>
+                                  </div>
+                                  <span className={`text-[8.5px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                                    req.adminApproval === 'approved' 
+                                      ? 'bg-indigo-600 text-white' 
+                                      : req.adminApproval === 'rejected' 
+                                      ? 'bg-rose-600 text-white' 
+                                      : 'bg-amber-500/20 text-amber-900 border border-amber-500/30'
+                                  }`}>
+                                    {req.adminApproval === 'approved' ? 'Approved' : req.adminApproval === 'rejected' ? 'Rejected' : 'Pending Review'}
+                                  </span>
+                                </div>
+
+                                {/* Approved OTP Pass */}
+                                {req.adminApproval === 'approved' && !req.isUsed && (
+                                  <div className="space-y-2 bg-white p-3 rounded-lg border border-indigo-200 shadow-3xs">
+                                    <p className="text-[10px] text-slate-700 leading-normal">
+                                      ✨ <strong>Gate-Pass OTP:</strong> Give this code to <strong className="font-bold text-slate-900">{req.fullName}</strong> to show at the gates:
+                                    </p>
+                                    <div className="text-center py-1">
+                                      <span className="font-mono text-2xl font-black text-indigo-800 tracking-widest select-all">
+                                        {req.otpCode || req.verificationCode}
+                                      </span>
+                                    </div>
+                                    <span className="block text-[8px] text-slate-450 text-center uppercase tracking-wider font-bold">Valid for 24 Hours</span>
+                                  </div>
+                                )}
+
+                                {/* Pending Review Details */}
+                                {req.adminApproval === 'pending' && (
+                                  <div className="bg-white/70 text-slate-600 text-[9.5px] p-2 rounded border border-amber-250/50 flex justify-between items-center">
+                                    <span>Aadhaar: <strong className="font-mono font-bold text-slate-850">{req.aadhaarNumber}</strong></span>
+                                    <span className="font-semibold text-amber-700 animate-pulse">Awaiting School Clearance...</span>
+                                  </div>
+                                )}
+
+                                {/* Rejected Details */}
+                                {req.adminApproval === 'rejected' && (
+                                  <p className="text-[10px] text-rose-950 font-medium leading-relaxed">
+                                    Administration rejected temporary pickup privileges due to credentials audit mismatch. Please contact the office.
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Immediate Quick Actions Buttons */}
                   <div className="grid grid-cols-2 gap-2.5">
                     
@@ -408,85 +589,24 @@ export default function ParentApp({
                     {/* Authorize Temp Button */}
                     <button
                       id="btn-parent-authorize-temp"
-                      onClick={() => setActiveScreen('new_pickup')}
-                      className="bg-white hover:bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col items-center justify-center text-center group transition text-xs font-semibold"
+                      onClick={() => {
+                        if (activeStudent?.isParentBlocked) {
+                          alert("Error: Your parent delegation privileges are blocked by the school.");
+                          return;
+                        }
+                        setActiveScreen('new_pickup');
+                      }}
+                      className={`p-3 rounded-xl flex flex-col items-center justify-center text-center group transition text-xs font-semibold border ${
+                        activeStudent?.isParentBlocked 
+                          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60' 
+                          : 'bg-white hover:bg-slate-50 border border-slate-200'
+                      }`}
                     >
-                      <UserPlus className="text-emerald-700 group-hover:scale-105 transition mb-2" size={18} />
+                      <UserPlus className={`${activeStudent?.isParentBlocked ? 'text-slate-400' : 'text-emerald-700'} group-hover:scale-105 transition mb-2`} size={18} />
                       Authorize Delegate
                     </button>
 
                   </div>
-
-                  {/* ACTIVE COMPONENT: School Clearance Tracker & Active OTP Passes */}
-                  {childRequests.filter(r => r.adminApproval === 'pending').map(req => (
-                    <div key={req.id} className="bg-amber-50/70 border border-amber-300/80 p-4 rounded-xl space-y-2">
-                      <div className="flex items-start gap-2.5">
-                        <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={16} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-bold text-slate-900">Awaiting School Clearance</h4>
-                            <span className="text-[8.5px] bg-amber-500/20 text-amber-900 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse">
-                              Pending Review
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-slate-700 mt-1 leading-relaxed">
-                            Delegation for <strong>{req.fullName}</strong> ({req.relationship}) has been submitted. Dr. R. K. Goenka (Principal) is checking Aadhaar & photo credentials.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="bg-white/60 text-slate-600 text-[9.5px] p-2 rounded border border-amber-200/50 flex justify-between items-center mt-1">
-                        <span>Aadhaar: <strong className="font-mono">{req.aadhaarNumber}</strong></span>
-                        <span className="font-semibold text-amber-700">Awaiting Gate Pass OTP...</span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Active OTP codes displaying upon School Clearance */}
-                  {childRequests.filter(r => r.adminApproval === 'approved' && !r.isUsed).map(req => (
-                    <div key={req.id} className="bg-indigo-50 border-2 border-indigo-600 p-4 rounded-xl space-y-2 relative shadow-xs">
-                      <div className="absolute top-2.5 right-3 flex items-center gap-1 bg-indigo-600 text-white font-mono text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
-                        <CheckCircle size={10} /> CLEARANCE GRANTED
-                      </div>
-                      
-                      <p className="text-[10.5px] text-indigo-950 font-bold pr-24">
-                        🔑 Gate-Pass OTP Generated:
-                      </p>
-                      
-                      <p className="text-[10.5px] text-slate-700 leading-relaxed mt-1 bg-white p-2 rounded border border-indigo-200">
-                        ✨ <strong>Principal Accepted:</strong> A secure gate-pass code is generated! This code is sent <strong>directly to your Parent App (below) and your Email</strong>. Give this code to <strong>{req.fullName}</strong> who must show it to the gate personnel upon arrival. Gate personnel will verify this code through the app to establish authenticity and parent consent.
-                      </p>
-
-                      <div className="text-center py-2.5">
-                        <div className="font-mono text-3xl font-black text-indigo-800 tracking-widest bg-white border border-indigo-250 px-5 py-1.5 rounded-lg inline-block select-all shadow-3xs animate-pulse">
-                          {req.otpCode || req.verificationCode}
-                        </div>
-                      </div>
-
-                      <div className="text-[9px] text-indigo-900/80 bg-indigo-100/60 p-2 rounded-lg border border-indigo-200/40 font-medium leading-normal">
-                        🛡️ <strong>School Security Notice:</strong> This code is valid for 24 hours under Principal clearance. Do not share with third parties.
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Rejected Requests display */}
-                  {childRequests.filter(r => r.adminApproval === 'rejected').map(req => (
-                    <div key={req.id} className="bg-rose-50 border border-rose-300 p-4 rounded-xl space-y-2">
-                      <div className="flex items-start gap-2.5">
-                        <AlertCircle className="text-rose-600 shrink-0 mt-0.5" size={16} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-bold text-rose-900">Security Clearance Denied</h4>
-                            <span className="text-[8.5px] bg-rose-600 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
-                              Rejected
-                            </span>
-                          </div>
-                          <p className="text-[10.5px] text-rose-950 mt-1 font-medium leading-relaxed">
-                            Administration rejected temporary pickup privileges for <strong>{req.fullName}</strong> due to credentials audit mismatch. Please contact the high school principal.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
 
                   {/* Parent ID mini banner link */}
                   <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 flex justify-between items-center text-xs font-semibold">
@@ -756,7 +876,7 @@ export default function ParentApp({
                           onChange={(e) => setNewPickupRelationship(e.target.value)}
                           className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white bg-no-repeat"
                         >
-                          {["Uncle", "Aunt", "Driver", "Family Friend", "Grand Parent", "Neighbor"].map(rel => (
+                          {["Uncle", "Aunt", "Driver", "Family Friend", "Grand Parent", "Neighbor", "Unknown Person (Delegated)"].map(rel => (
                             <option key={rel} value={rel}>{rel}</option>
                           ))}
                         </select>
@@ -1033,10 +1153,10 @@ export default function ParentApp({
                           value={parentPassword}
                           onChange={(e) => setParentPasswordInternal(e.target.value)}
                           className="w-full text-xs p-2 bg-emerald-50/30 border border-emerald-250 rounded-lg focus:bg-white font-mono mt-1"
-                          placeholder="e.g. student123"
+                          placeholder="Change or keep password"
                         />
                         <span className="block text-[9px] text-slate-400 mt-1 font-semibold">
-                          Default is student123. Changing this updates your login password for admission access.
+                          Default password is your child's Admission Number. You can change it here or retain it.
                         </span>
                       </div>
                     </div>

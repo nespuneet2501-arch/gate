@@ -493,15 +493,18 @@ export default function SecurityDashboard({
                 </div>
 
                 <div className="text-left space-y-3.5">
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase">Verification Code *</label>
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                      Enter 6-Digit Gate Pass / OTP *
+                    </label>
                     <input 
                       id="input-security-verify-code"
                       type="text" 
+                      maxLength={6}
                       placeholder="e.g. 582741"
                       value={inputTempCode}
                       onChange={(e) => setInputTempCode(e.target.value)}
-                      className="w-full text-center tracking-widest font-mono font-bold text-lg p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full text-center font-mono font-bold text-3xl p-4 bg-white border-2 border-slate-400 rounded-xl text-slate-950 placeholder-slate-400 focus:outline-none focus:border-[#0b3294] focus:ring-4 focus:ring-[#0b3294]/10 shadow-md transition-all duration-150"
                     />
                   </div>
 
@@ -509,9 +512,9 @@ export default function SecurityDashboard({
                     id="btn-verify-temp-code-action"
                     disabled={!inputTempCode}
                     onClick={() => handleVerifyTempCode(inputTempCode)}
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded-lg text-xs transition disabled:opacity-50"
+                    className="w-full bg-[#0b3294] hover:bg-[#082672] text-white font-extrabold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
                   >
-                    Run Code Verification Check
+                    Run Live Security Verification
                   </button>
                 </div>
               </div>

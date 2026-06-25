@@ -236,7 +236,7 @@ export const initialEmailLogs: EmailLog[] = [
 export const gatesList = ["Gate 1", "Gate 2", "Main Gate", "Junior Wing Gate"];
 export const officersList = ["Officer Ram Singh", "Officer Vijay Kumar", "Inspector Sanjay Pal"];
 
-export const sampleExcelCSVData = `Student ID,Admission Number,Student Name,Class,Section,Date of Birth,Address,Father Name,Mother Name,Father Email,Mother Email,Father Mobile,Mother Mobile
-STU3004,ADM20251122,Ishita Mehra,Class 3,Section B,2017-08-14,Row House 5, Green Glen, New Delhi,Vikram Mehra,Nisha Mehra,vikram.mehra@gmail.com,nisha.mehra@gmail.com,+91 98888 77777,+91 98888 66666
-STU3005,ADM20260408,Rohan Verma,Class 1,Section C,2019-12-05,Apartment 3C, DLF Phase 5, Gurgaon,Alok Verma,Smita Verma,alok.verma@yahoo.com,smita.verma@gmail.com,+91 95551 11222,+91 95551 22333
-STU3006,ADM20240930,Ananya Iyer,Class 4,Section A,2016-10-22,B-140, Safdurjung Enclave, New Delhi,Karthik Iyer,Gauri Iyer,karthik.iyer@gmail.com,gauri.iyer@gmail.com,+91 91112 33445,+91 91112 55667`;
+export const sampleExcelCSVData = `Admission Number,Student Name,Class,Section,Date of Birth,Address,Father Name,Mother Name,Father Email,Mother Email,Father Mobile,Mother Mobile
+ADM20251122,Ishita Mehra,Class 3,Section B,2017-08-14,"Row House 5, Green Glen, New Delhi",Vikram Mehra,Nisha Mehra,vikram.mehra@gmail.com,nisha.mehra@gmail.com,+91 98888 77777,+91 98888 66666
+ADM20260408,Rohan Verma,Class 1,Section C,2019-12-05,"Apartment 3C, DLF Phase 5, Gurgaon",Alok Verma,Smita Verma,alok.verma@yahoo.com,smita.verma@gmail.com,+91 95551 11222,+91 95551 22333
+ADM20240930,Ananya Iyer,Class 4,Section A,2016-10-22,"B-140, Safdurjung Enclave, New Delhi",Karthik Iyer,Gauri Iyer,karthik.iyer@gmail.com,gauri.iyer@gmail.com,+91 91112 33445,+91 91112 55667`;

@@ -258,3 +258,68 @@ export async function migrateAllToFirebase(
 
   return { success: true, counts };
 }
+
+// -------------------------------------------------------------
+// CLEAR/DELETE ALL DATA FROM FIRESTORE (WIPE DB)
+// -------------------------------------------------------------
+export async function clearAllFirebaseData(): Promise<void> {
+  await clearSelectedFirebaseCollections(['students', 'pickupRequests', 'securityLogs', 'notifications', 'emailLogs']);
+}
+
+// -------------------------------------------------------------
+// CLEAR SELECT CATEGORIES FROM FIRESTORE
+// -------------------------------------------------------------
+export async function clearSelectedFirebaseCollections(collections: string[]): Promise<void> {
+  for (const colName of collections) {
+    const colRef = collection(db, colName);
+    const snap = await getDocs(colRef);
+    let batch = writeBatch(db);
+    let count = 0;
+    
+    for (const docSnap of snap.docs) {
+      batch.delete(docSnap.ref);
+      count++;
+      if (count === 400) {
+        await batch.commit();
+        batch = writeBatch(db);
+        count = 0;
+      }
+    }
+    
+    if (count > 0) {
+      await batch.commit();
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// DELETE SINGLE RECORD FROM FIRESTORE
+// -------------------------------------------------------------
+export async function deleteRecordFromFirebase(collectionName: string, id: string): Promise<void> {
+  const docRef = doc(db, collectionName, id);
+  await deleteDoc(docRef);
+}
+
+// -------------------------------------------------------------
+// DELETE MULTIPLE RECORDS FROM FIRESTORE
+// -------------------------------------------------------------
+export async function deleteMultipleRecordsFromFirebase(collectionName: string, ids: string[]): Promise<void> {
+  let batch = writeBatch(db);
+  let count = 0;
+  
+  for (const id of ids) {
+    const docRef = doc(db, collectionName, id);
+    batch.delete(docRef);
+    count++;
+    if (count === 400) {
+      await batch.commit();
+      batch = writeBatch(db);
+      count = 0;
+    }
+  }
+  
+  if (count > 0) {
+    await batch.commit();
+  }
+}
+

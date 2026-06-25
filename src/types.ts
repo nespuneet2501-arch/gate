@@ -15,6 +15,7 @@ export interface Student {
   motherMobile: string;
   fatherPhoto: string; // data URL or URL
   motherPhoto: string; // data URL or URL
+  isParentBlocked?: boolean; // If true, parent is blocked from making changes or creating requests
 }
 
 export interface PickupRequest {
@@ -36,6 +37,7 @@ export interface PickupRequest {
   verificationCode?: string; // 6-digit code or temporary QR token
   codeExpiresAt?: string; // ISO string (30 mins from approval)
   isUsed?: boolean;
+  isDelegated?: boolean; // True if delegated to an unknown/non-relative individual
   
   // School Admin & Gate clearance fields
   adminApproval?: 'pending' | 'approved' | 'rejected';

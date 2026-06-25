@@ -27,17 +27,61 @@ import {
   saveSecurityLogToFirebase,
   saveNotificationToFirebase,
   saveEmailLogToFirebase,
-  migrateAllToFirebase
+  migrateAllToFirebase,
+  clearAllFirebaseData,
+  clearSelectedFirebaseCollections,
+  deleteRecordFromFirebase,
+  deleteMultipleRecordsFromFirebase
 } from './lib/firebaseSync';
 import { 
   ShieldCheck, Smartphone, User, Users, CheckCircle, Clock, Calendar, 
   Sparkles, HelpCircle, AlertCircle, RefreshCw, Layers, Database, Link2,
   LogOut, GraduationCap, Lock, Building, MapPin, Key, Radio, LayoutDashboard, Shield, Flame
 } from 'lucide-react';
+import { CustomDialog, DialogType } from './components/CustomDialog';
 
 export default function App() {
   // Primary active system role: 'admin' | 'parent' | 'security'
   const [activeRole, setActiveRole] = useState<'admin' | 'parent' | 'security'>('admin');
+
+  // Custom Dialog System State
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: DialogType;
+    confirmText?: string;
+    cancelText?: string;
+    requireValidationText?: string;
+    validationPlaceholder?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onConfirm: () => {},
+  });
+
+  const showDialog = (config: {
+    title: string;
+    message: string;
+    type: DialogType;
+    confirmText?: string;
+    cancelText?: string;
+    requireValidationText?: string;
+    validationPlaceholder?: string;
+    onConfirm: () => void;
+  }) => {
+    setDialogState({
+      isOpen: true,
+      ...config
+    });
+  };
+
+  const closeDialog = () => {
+    setDialogState(prev => ({ ...prev, isOpen: false }));
+  };
 
   // Custom states matching user requirements
   const [activeTab, setActiveTab] = useState<'staff' | 'parent' | 'gate'>('staff');
@@ -154,14 +198,131 @@ export default function App() {
     try {
       const res = await migrateAllToFirebase(students, pickupRequests, securityLogs, notifications, emailLogs);
       if (res.success) {
-        alert(`🎉 Cloud Migration Successful!\n\nTransferred records to Firestore:\n- Students: ${res.counts.students}\n- Pickup Requests: ${res.counts.requests}\n- Security Logs: ${res.counts.logs}\n- Notifications: ${res.counts.notifications}\n- Email Logs: ${res.counts.emails}`);
+        showDialog({
+          title: "Cloud Migration Successful 🚀",
+          message: `Your school directory has been successfully transferred to Google Cloud Firestore:\n\n• Students: ${res.counts.students} records\n• Pickup Requests: ${res.counts.requests} records\n• Gate Entry Logs: ${res.counts.logs} records\n• Notifications: ${res.counts.notifications} records\n• Email Dispatches: ${res.counts.emails} records`,
+          type: 'success',
+          onConfirm: closeDialog
+        });
         setFirebaseStatus('connected');
         await loadFirebaseDatabase();
       }
     } catch (err: any) {
-      alert(`Migration Failed: ${err.message || err}`);
+      showDialog({
+        title: "Migration Failed",
+        message: `Could not transfer database records: ${err.message || err}`,
+        type: 'error',
+        onConfirm: closeDialog
+      });
     } finally {
       setFirebaseMigrating(false);
+    }
+  };
+
+  // Delete uploaded data from Firestore database and local states (can be selective)
+  const handleWipeDatabase = async (collectionsToWipe?: string[]) => {
+    const defaultCols = ['students', 'pickupRequests', 'securityLogs', 'notifications', 'emailLogs'];
+    const targets = collectionsToWipe && collectionsToWipe.length > 0 ? collectionsToWipe : defaultCols;
+    
+    const label = targets.length === defaultCols.length ? "all records" : targets.map(c => {
+      if (c === 'students') return 'Student Directory';
+      if (c === 'pickupRequests') return 'Pickup Passes';
+      if (c === 'securityLogs') return 'Gate Entry Logs';
+      if (c === 'notifications') return 'App Notifications';
+      if (c === 'emailLogs') return 'Email Dispatches';
+      return c;
+    }).join(", ");
+
+    showDialog({
+      title: "Confirm Live Database Purge",
+      message: `⚠️ CONFIRM CLEAR: This will permanently delete the selected ${label} from both the Live Google Cloud Firestore database and your local browser storage.\n\nThis operation is IRREVERSIBLE.`,
+      type: 'danger',
+      confirmText: 'Yes, Purge Live Data',
+      cancelText: 'Cancel Purge',
+      onConfirm: async () => {
+        closeDialog();
+        setFirebaseConnecting(true);
+        try {
+          if (databaseMode === 'firebase' && firebaseStatus === 'connected') {
+            await clearSelectedFirebaseCollections(targets);
+          }
+          
+          // Reset local state variables selectively
+          if (targets.includes('students')) {
+            setStudents([]);
+            lastStudentsRef.current = [];
+            localStorage.removeItem('goenka_students');
+          }
+          if (targets.includes('pickupRequests')) {
+            setPickupRequests([]);
+            lastRequestsRef.current = [];
+            localStorage.removeItem('goenka_requests');
+          }
+          if (targets.includes('securityLogs')) {
+            setSecurityLogs([]);
+            lastLogsRef.current = [];
+            localStorage.removeItem('goenka_logs');
+          }
+          if (targets.includes('notifications')) {
+            setNotifications([]);
+            lastNotifsRef.current = [];
+            localStorage.removeItem('goenka_notifs');
+          }
+          if (targets.includes('emailLogs')) {
+            setEmailLogs([]);
+            lastEmailsRef.current = [];
+            localStorage.removeItem('goenka_emails');
+          }
+          
+          showDialog({
+            title: "Live Database Purge Complete",
+            message: `✅ Selected [${label}] has been completely reset to an empty state in both your Cloud Database and local sandbox.`,
+            type: 'success',
+            onConfirm: closeDialog
+          });
+        } catch (err: any) {
+          showDialog({
+            title: "Database Purge Failed",
+            message: `Error during selective purge: ${err.message || err}`,
+            type: 'error',
+            onConfirm: closeDialog
+          });
+        } finally {
+          setFirebaseConnecting(false);
+        }
+      }
+    });
+  };
+
+  // Delete specific student records and sync immediately
+  const handleDeleteStudents = async (ids: string[]) => {
+    setFirebaseConnecting(true);
+    try {
+      if (databaseMode === 'firebase' && firebaseStatus === 'connected') {
+        await deleteMultipleRecordsFromFirebase('students', ids);
+      }
+      setStudents(prev => prev.filter(s => !ids.includes(s.id)));
+      
+      // Also remove local storage fallback
+      const stored = localStorage.getItem('goenka_students');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as Student[];
+          const filtered = parsed.filter(s => !ids.includes(s.id));
+          localStorage.setItem('goenka_students', JSON.stringify(filtered));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    } catch (err: any) {
+      showDialog({
+        title: "Deletion Sync Failed",
+        message: `Could not delete records from Firestore cloud database: ${err.message || err}`,
+        type: 'error',
+        onConfirm: closeDialog
+      });
+    } finally {
+      setFirebaseConnecting(false);
     }
   };
 
@@ -261,15 +422,30 @@ export default function App() {
   }, []);
 
   const handleAndroidHome = () => {
-    alert("Simulated Android Home Gesture: Swiping up to return to home/dashboard.");
+    showDialog({
+      title: "Simulator Home Gesture",
+      message: "Simulated Android Home Gesture: Swiping up to return to home/dashboard.",
+      type: 'info',
+      onConfirm: closeDialog
+    });
   };
 
   const handleAndroidBack = () => {
-    alert("Simulated Android Back Gesture. Navigate back 1 level.");
+    showDialog({
+      title: "Simulator Back Gesture",
+      message: "Simulated Android Back Gesture. Navigating back one level within Parent app portal container.",
+      type: 'info',
+      onConfirm: closeDialog
+    });
   };
 
   const handleAndroidRecents = () => {
-    alert("Simulated Android Recents gesture. Multi-tasking list: GD Goenka Dispersal background services are ACTIVE.");
+    showDialog({
+      title: "Simulator Recents Gesture",
+      message: "Simulated Android Recents gesture. Multi-tasking application list shows: GD Goenka Dispersal background services are actively running.",
+      type: 'info',
+      onConfirm: closeDialog
+    });
   };
 
   // Simulation Wizard Scenario State
@@ -483,26 +659,46 @@ export default function App() {
   };
 
   const handleDisconnectGoogleSheets = async () => {
-    if (confirm("Disconnect Google Sheets integration? Your local state remains safe, but automatic cloud sheet sync will stop.")) {
-      try {
-        await logoutFromGoogleSheets();
-        
-        // Clear caches and reset states
-        localStorage.removeItem('goenka_sheets_sync_status');
-        localStorage.removeItem('goenka_sheets_user_email');
-        localStorage.removeItem('goenka_sheets_token');
-        localStorage.removeItem('goenka_sheets_spreadsheet_id');
-        
-        setSheetsUser(null);
-        setSheetsToken(null);
-        setSheetsSpreadsheetId(null);
-        setSheetsSpreadsheetUrl(null);
-        setSheetsSyncStatus('disabled');
-        addNotification("Google Sheets Disconnected", "Google Sheets synchronization active service terminated.", "system");
-      } catch (err: any) {
-        alert("Logout error: " + err.message);
+    showDialog({
+      title: "Disconnect Sheets Integration?",
+      message: "Are you sure you want to disconnect Google Sheets integration? Your local client state and school logs will remain completely safe in browser storage, but automatic cloud spreadsheet writes will stop.",
+      type: 'confirm',
+      confirmText: 'Disconnect Sheets',
+      cancelText: 'Keep Connected',
+      onConfirm: async () => {
+        closeDialog();
+        try {
+          await logoutFromGoogleSheets();
+          
+          // Clear caches and reset states
+          localStorage.removeItem('goenka_sheets_sync_status');
+          localStorage.removeItem('goenka_sheets_user_email');
+          localStorage.removeItem('goenka_sheets_token');
+          localStorage.removeItem('goenka_sheets_spreadsheet_id');
+          
+          setSheetsUser(null);
+          setSheetsToken(null);
+          setSheetsSpreadsheetId(null);
+          setSheetsSpreadsheetUrl(null);
+          setSheetsSyncStatus('disabled');
+          addNotification("Google Sheets Disconnected", "Google Sheets synchronization active service terminated.", "system");
+
+          showDialog({
+            title: "Sheets Disconnected",
+            message: "Successfully logged out from Google Sheets and disabled real-time cloud sheet syncing.",
+            type: 'success',
+            onConfirm: closeDialog
+          });
+        } catch (err: any) {
+          showDialog({
+            title: "Logout Error",
+            message: `Logout failed: ${err.message}`,
+            type: 'error',
+            onConfirm: closeDialog
+          });
+        }
       }
-    }
+    });
   };
 
   const bootstrapSheetsWithAppState = async (token: string, spreadsheetId: string) => {
@@ -611,11 +807,21 @@ export default function App() {
       ]);
 
       setSheetsSyncStatus('synced');
-      alert("⚡ Database Forced Sync Success! All 5 tables on your Google Spreadsheet have been written and verified.");
+      showDialog({
+        title: "Database Forced Sync Success! ⚡",
+        message: "All 5 tables on your Google Spreadsheet (Pupils, Pickup Passes, Logs, Notifications, Emails) have been fully rewritten and cloud-synchronized.",
+        type: 'success',
+        onConfirm: closeDialog
+      });
     } catch (err: any) {
       console.error("Manual force sync failure:", err);
       setSheetsSyncStatus('error');
-      alert("Sync failed: " + err.message);
+      showDialog({
+        title: "Sync Failed",
+        message: `Sync operation failed: ${err.message}`,
+        type: 'error',
+        onConfirm: closeDialog
+      });
     }
   };
 
@@ -753,22 +959,38 @@ export default function App() {
 
   // Reset core database to factory demonstration settings
   const handleResetToFactorySettings = async () => {
-    if (confirm("Reset Student & Authorization Database back to default settings?")) {
-      localStorage.removeItem('goenka_students');
-      localStorage.removeItem('goenka_requests');
-      localStorage.removeItem('goenka_logs');
-      localStorage.removeItem('goenka_notifs');
-      localStorage.removeItem('goenka_emails');
+    showDialog({
+      title: "Reset Database to Demo Settings?",
+      message: "This will restore the Student & Authorization database back to standard default settings, clearing any custom entries or uploads. Are you sure you want to proceed?",
+      type: 'confirm',
+      confirmText: 'Reset to Defaults',
+      cancelText: 'Cancel Reset',
+      onConfirm: () => {
+        closeDialog();
+        localStorage.removeItem('goenka_students');
+        localStorage.removeItem('goenka_requests');
+        localStorage.removeItem('goenka_logs');
+        localStorage.removeItem('goenka_notifs');
+        localStorage.removeItem('goenka_emails');
 
-      setStudents(initialStudents);
-      setPickupRequests(initialPickupRequests);
-      setSecurityLogs(initialSecurityLogs);
-      setNotifications(initialNotifications);
-      setEmailLogs(initialEmailLogs);
-      
-      addNotification("System Cleared", "Verification database successfully restored to standard demonstration setup.", "system");
-      alert("Database reset successfully!");
-    }
+        setStudents(initialStudents);
+        setPickupRequests(initialPickupRequests);
+        setSecurityLogs(initialSecurityLogs);
+        setNotifications(initialNotifications);
+        setEmailLogs(initialEmailLogs);
+        
+        addNotification("System Cleared", "Verification database successfully restored to standard demonstration setup.", "system");
+
+        setTimeout(() => {
+          showDialog({
+            title: "Database Reset Complete",
+            message: "The school database has been successfully restored to standard factory demonstration records.",
+            type: 'success',
+            onConfirm: closeDialog
+          });
+        }, 300);
+      }
+    });
   };
 
   // Authenticate user login credentials across roles
@@ -816,7 +1038,7 @@ export default function App() {
           savedPasswordsMap = JSON.parse(storedStr);
         }
       } catch (err) {}
-      const expectedPass = savedPasswordsMap[matchedStudent.admissionNumber] || 'student123';
+      const expectedPass = savedPasswordsMap[matchedStudent.admissionNumber] || matchedStudent.admissionNumber;
 
       if (loginPassword === expectedPass) {
         setLoggedInParentStudentId(matchedStudent.id);
@@ -824,7 +1046,7 @@ export default function App() {
         setLoginUsername('');
         setLoginPassword('');
       } else {
-        setLoginError('Incorrect password. Default is student123.');
+        setLoginError(`Incorrect password. Default is your student's Admission Number (${matchedStudent.admissionNumber}).`);
       }
     } else if (activeTab === 'gate') {
       const expectedUser = 'gate';
@@ -1109,7 +1331,7 @@ export default function App() {
                   </button>
 
                   <div className="bg-slate-950/40 p-3.5 rounded-xl border border-slate-800 text-[10px] text-slate-400 leading-normal font-semibold">
-                    🔑 <strong className="text-[#fbdf7e]">First time login info:</strong> Enter your child's Admission Number (e.g., <span className="font-mono text-[#fbdf7e]">ADM2026001</span>) and the default password <span className="font-mono text-[#fbdf7e]">student123</span>. You can change your password inside the parent profile page after logging in.
+                    🔑 <strong className="text-[#fbdf7e]">First time login info:</strong> Enter your child's Admission Number (e.g., <span className="font-mono text-[#fbdf7e]">ADM2026001</span>) as both the Admission Number and the password. You can change your password inside the parent profile page after logging in or retain the admission number.
                   </div>
                 </form>
               </div>
@@ -1233,6 +1455,8 @@ export default function App() {
                     addEmail={addEmail}
                     notifications={notifications}
                     emailLogs={emailLogs}
+                    onWipeDatabase={handleWipeDatabase}
+                    onDeleteStudents={handleDeleteStudents}
                   />
                 </div>
               </div>
@@ -1636,7 +1860,12 @@ export default function App() {
                                   <button 
                                     onClick={() => {
                                       navigator.clipboard.writeText(window.location.hostname);
-                                      alert("Domain copied to clipboard!");
+                                      showDialog({
+                                        title: "Domain Copied",
+                                        message: `Successfully copied authorized hostname "${window.location.hostname}" to clipboard. You can now paste this directly into your Firebase Authentication console setup!`,
+                                        type: 'success',
+                                        onConfirm: closeDialog
+                                      });
                                     }}
                                     className="bg-emerald-800 text-white hover:bg-emerald-700 p-1.5 px-2.5 rounded-lg font-bold text-[9px] uppercase tracking-wider cursor-pointer active:scale-95 transition"
                                   >
@@ -1770,6 +1999,19 @@ export default function App() {
         </div>
       </footer>
 
+      {/* Reusable non-native custom dialog */}
+      <CustomDialog
+        isOpen={dialogState.isOpen}
+        title={dialogState.title}
+        message={dialogState.message}
+        type={dialogState.type}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        requireValidationText={dialogState.requireValidationText}
+        validationPlaceholder={dialogState.validationPlaceholder}
+        onConfirm={dialogState.onConfirm}
+        onCancel={closeDialog}
+      />
     </div>
   );
 }
