@@ -125,6 +125,15 @@ export default function ParentApp({
   const [photoUpdateMessage, setPhotoUpdateMessage] = useState('');
   const [parentPassword, setParentPasswordInternal] = useState('');
 
+  // Child info editing states
+  const [childName, setChildName] = useState('');
+  const [childDob, setChildDob] = useState('');
+  const [childAddress, setChildAddress] = useState('');
+  const [childFatherName, setChildFatherName] = useState('');
+  const [childMotherName, setChildMotherName] = useState('');
+  const [childMotherMobile, setChildMotherMobile] = useState('');
+  const [childMotherEmail, setChildMotherEmail] = useState('');
+
   // Load parent passwords on active student change
   useEffect(() => {
     if (activeStudent) {
@@ -158,6 +167,13 @@ export default function ParentApp({
     if (activeStudent) {
       setPrimaryEmail(activeStudent.fatherEmail);
       setPrimaryMobile(activeStudent.fatherMobile);
+      setChildName(activeStudent.name || '');
+      setChildDob(activeStudent.dob || '');
+      setChildAddress(activeStudent.address || '');
+      setChildFatherName(activeStudent.fatherName || '');
+      setChildMotherName(activeStudent.motherName || '');
+      setChildMotherMobile(activeStudent.motherMobile || '');
+      setChildMotherEmail(activeStudent.motherEmail || '');
       
       // Generate Secure Permanent QR data
       // Encodes Student ID + Parent Name + Validation Key
@@ -336,8 +352,15 @@ export default function ParentApp({
     if (activeStudent) {
       setStudents(prev => prev.map(s => s.id === activeStudent.id ? {
         ...s,
+        name: childName,
+        dob: childDob,
+        address: childAddress,
+        fatherName: childFatherName,
+        motherName: childMotherName,
         fatherEmail: primaryEmail,
-        fatherMobile: primaryMobile
+        fatherMobile: primaryMobile,
+        motherMobile: childMotherMobile,
+        motherEmail: childMotherEmail
       } : s));
 
       // Save custom portal passwords in local storage mapper
@@ -486,6 +509,41 @@ export default function ParentApp({
                     </div>
                   )}
 
+                  {/* Immediate Quick Actions Buttons - PLACED AT THE TOP FOR DIRECT INSTANT VISIBILITY */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    
+                    {/* View ID Button */}
+                    <button
+                      id="btn-parent-id-pass"
+                      onClick={() => setActiveScreen('idcard')}
+                      className="bg-white hover:bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col items-center justify-center text-center group transition text-xs font-semibold shadow-2xs"
+                    >
+                      <CreditCard className="text-emerald-700 group-hover:scale-105 transition mb-2" size={18} />
+                      Parent Digital ID
+                    </button>
+
+                    {/* Authorize Temp Button */}
+                    <button
+                      id="btn-parent-authorize-temp"
+                      onClick={() => {
+                        if (activeStudent?.isParentBlocked) {
+                          alert("Error: Your parent delegation privileges are blocked by the school.");
+                          return;
+                        }
+                        setActiveScreen('new_pickup');
+                      }}
+                      className={`p-3 rounded-xl flex flex-col items-center justify-center text-center group transition text-xs font-semibold border shadow-2xs ${
+                        activeStudent?.isParentBlocked 
+                          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60' 
+                          : 'bg-[#0b3294] text-white hover:bg-[#0b3294]/90 border-[#fbdf7e]/20'
+                      }`}
+                    >
+                      <UserPlus className={`${activeStudent?.isParentBlocked ? 'text-slate-400' : 'text-[#fbdf7e]'} group-hover:scale-105 transition mb-2`} size={18} />
+                      Authorize Delegate
+                    </button>
+
+                  </div>
+
                   {/* Parent Pickup Requests List at the Top (Sorted strictly by newest first!) */}
                   <div className="space-y-3 pt-1">
                     <div className="flex items-center justify-between">
@@ -573,40 +631,7 @@ export default function ParentApp({
                     )}
                   </div>
 
-                  {/* Immediate Quick Actions Buttons */}
-                  <div className="grid grid-cols-2 gap-2.5">
-                    
-                    {/* View ID Button */}
-                    <button
-                      id="btn-parent-id-pass"
-                      onClick={() => setActiveScreen('idcard')}
-                      className="bg-white hover:bg-slate-50 border border-slate-200 p-3 rounded-xl flex flex-col items-center justify-center text-center group transition text-xs font-semibold"
-                    >
-                      <CreditCard className="text-emerald-700 group-hover:scale-105 transition mb-2" size={18} />
-                      Parent Digital ID
-                    </button>
-
-                    {/* Authorize Temp Button */}
-                    <button
-                      id="btn-parent-authorize-temp"
-                      onClick={() => {
-                        if (activeStudent?.isParentBlocked) {
-                          alert("Error: Your parent delegation privileges are blocked by the school.");
-                          return;
-                        }
-                        setActiveScreen('new_pickup');
-                      }}
-                      className={`p-3 rounded-xl flex flex-col items-center justify-center text-center group transition text-xs font-semibold border ${
-                        activeStudent?.isParentBlocked 
-                          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60' 
-                          : 'bg-white hover:bg-slate-50 border border-slate-200'
-                      }`}
-                    >
-                      <UserPlus className={`${activeStudent?.isParentBlocked ? 'text-slate-400' : 'text-emerald-700'} group-hover:scale-105 transition mb-2`} size={18} />
-                      Authorize Delegate
-                    </button>
-
-                  </div>
+                  {/* Pickup Requests list header */}
 
                   {/* Parent ID mini banner link */}
                   <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 flex justify-between items-center text-xs font-semibold">
@@ -1144,24 +1169,106 @@ export default function ParentApp({
                           className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
                         />
                       </div>
+                    </div>
 
-                      <div className="border-t border-slate-100 pt-3.5">
-                        <label className="block text-[10px] font-bold text-emerald-850 uppercase tracking-wide">Change Portal Login Password</label>
+                    <h4 className="text-[10px] font-bold text-[#0b3294] uppercase tracking-wider border-b border-slate-100 pb-1 pt-2">
+                      Child's Information Settings
+                    </h4>
+
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Child's Full Name</label>
                         <input 
                           type="text" 
                           required
-                          value={parentPassword}
-                          onChange={(e) => setParentPasswordInternal(e.target.value)}
-                          className="w-full text-xs p-2 bg-emerald-50/30 border border-emerald-250 rounded-lg focus:bg-white font-mono mt-1"
-                          placeholder="Change or keep password"
+                          value={childName}
+                          onChange={(e) => setChildName(e.target.value)}
+                          className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white font-semibold"
                         />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Child's Date of Birth</label>
+                        <input 
+                          type="date" 
+                          required
+                          value={childDob}
+                          onChange={(e) => setChildDob(e.target.value)}
+                          className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Home Address</label>
+                        <textarea 
+                          rows={2}
+                          required
+                          value={childAddress}
+                          onChange={(e) => setChildAddress(e.target.value)}
+                          className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Father's Full Name</label>
+                        <input 
+                          type="text" 
+                          required
+                          value={childFatherName}
+                          onChange={(e) => setChildFatherName(e.target.value)}
+                          className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Mother's Full Name</label>
+                        <input 
+                          type="text" 
+                          required
+                          value={childMotherName}
+                          onChange={(e) => setChildMotherName(e.target.value)}
+                          className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Mother's Mobile Number</label>
+                        <input 
+                          type="text" 
+                          required
+                          value={childMotherMobile}
+                          onChange={(e) => setChildMotherMobile(e.target.value)}
+                          className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Mother's Email Address</label>
+                        <input 
+                          type="email" 
+                          required
+                          value={childMotherEmail}
+                          onChange={(e) => setChildMotherEmail(e.target.value)}
+                          className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-3.5">
+                      <label className="block text-[10px] font-bold text-emerald-850 uppercase tracking-wide">Change Portal Login Password</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={parentPassword}
+                        onChange={(e) => setParentPasswordInternal(e.target.value)}
+                        className="w-full text-xs p-2 bg-emerald-50/30 border border-emerald-250 rounded-lg focus:bg-white font-mono mt-1"
+                        placeholder="Change or keep password"
+                      />
                         <span className="block text-[9px] text-slate-400 mt-1 font-semibold">
                           Default password is your child's Admission Number. You can change it here or retain it.
                         </span>
                       </div>
                     </div>
-
-                  </div>
 
                   <button
                     id="btn-save-parent-profile-settings"

@@ -1579,7 +1579,29 @@ export default function App() {
                       </button>
 
                       <div className="bg-slate-950/40 p-3.5 rounded-xl border border-slate-800 text-[10px] text-slate-400 leading-normal font-semibold">
-                        🔑 <strong className="text-[#fbdf7e]">First time login info:</strong> Enter your child's Admission Number (e.g., <span className="font-mono text-[#fbdf7e]">ADM2026001</span>) as both the Admission Number and the password. You can change your password inside the parent profile page after logging in or retain the admission number.
+                        🔑 <strong className="text-[#fbdf7e]">First time login info:</strong> Enter your child's Admission Number as both the Admission Number and the password. You can change your password inside the parent profile page after logging in.
+                      </div>
+
+                      <div className="bg-slate-950/65 border border-slate-800/80 p-3.5 rounded-xl space-y-2">
+                        <span className="block text-[10px] font-black uppercase text-[#fbdf7e] tracking-wider text-left">
+                          💡 Parent Quick-Login Accounts:
+                        </span>
+                        <div className="grid grid-cols-2 gap-2 text-left">
+                          {students.slice(0, 4).map(s => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                setLoginUsername(s.admissionNumber);
+                                setLoginPassword(s.admissionNumber);
+                              }}
+                              className="text-left bg-slate-900 hover:bg-slate-850 border border-slate-800 p-2 rounded-lg text-[9px] font-semibold text-slate-300 hover:text-white transition cursor-pointer"
+                            >
+                              <span className="block font-bold text-slate-200 truncate">Parent of {s.name}</span>
+                              <span className="block font-mono text-[8px] text-slate-450 mt-0.5 truncate">{s.admissionNumber}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </form>
                   </div>
