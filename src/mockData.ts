@@ -170,7 +170,7 @@ export const initialPickupRequests: PickupRequest[] = [
     photograph: svgAvatars.tempGuardian1,
     aadhaarNumber: "xxxx-xxxx-9999",
     aadhaarPhoto: svgAvatars.aadhaarPhoto,
-    notes: "Taking Kabir for birthday party setup",
+    notes: "Taking Kabir for birthday party setup. Weekend plans: going to Agra.",
     status: "pending",
     createdAt: "2026-06-17T08:00:00.000"
   },
@@ -212,6 +212,15 @@ export const initialNotifications: AppNotification[] = [
     timestamp: "2026-06-16T14:40:12.000",
     studentId: "STU3001",
     type: "pickup_confirm",
+    isRead: false
+  },
+  {
+    id: "NOTIF003",
+    title: "Agra Dispersal Instruction",
+    body: "Kabir Sen is going to Agra. Out-of-station weekend travel pre-approved by parents.",
+    timestamp: "2026-06-17T08:05:00.000",
+    studentId: "STU3003",
+    type: "pickup_request",
     isRead: false
   }
 ];

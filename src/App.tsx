@@ -1157,6 +1157,8 @@ export default function App() {
 
   const activeAuthorizationsToday = pickupRequests.filter(req => req.status === 'approved' && !req.isUsed).length;
 
+  const isLoggedIn = loggedInRole !== null;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950 relative overflow-x-hidden min-w-[320px]">
       
@@ -1164,120 +1166,124 @@ export default function App() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(11,50,148,0.25),transparent_65%)] pointer-events-none z-0" />
 
       {/* COMPACT & GORGEOUS BRAND HEADER */}
-      <header className="relative z-10 pt-6 pb-2 text-center max-w-4xl mx-auto shrink-0 px-4">
-        <div className="flex items-center justify-center gap-2 mb-1 animate-fade-in">
-          <div className="bg-[#0b3294] border-2 border-[#fbdf7e]/60 px-5 py-2.5 rounded-xl flex items-center justify-center shadow-2xl shadow-black/40 select-none">
-            <span className="font-serif font-extrabold text-[#fbdf7e] text-sm md:text-base tracking-wide uppercase pr-1.5">GD</span>
-            
-            {/* Iconic flying gold bird symbol */}
-            <div className="w-8 h-5 select-none pb-0.5">
-              <svg viewBox="0 0 100 64" className="w-full h-full filter drop-shadow-[0_1.5px_2px_rgba(251,223,126,0.5)]" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path 
-                  d="M5 45C22 41 40 18 32 4C41 15 45 28 69 30C83 29 90 22 93 17C86 26 75 33 66 36C56 39 46 47 43 59C41 47 25 43 5 45ZM43 59C38 48 20 46 5 45M5 45C10 40 22 40 32 4" 
-                  fill="url(#goldGradientLogoApp)" 
-                  stroke="url(#goldGradientLogoApp)"
-                  strokeWidth="0.5"
-                />
-                <defs>
-                  <linearGradient id="goldGradientLogoApp" x1="5" y1="4" x2="93" y2="59" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#FFF7D6" />
-                    <stop offset="25%" stopColor="#FBDF7E" />
-                    <stop offset="65%" stopColor="#D4AF37" />
-                    <stop offset="100%" stopColor="#916B00" />
-                  </linearGradient>
-                </defs>
-              </svg>
+      {isLoggedIn && (
+        <header className="relative z-10 pt-6 pb-2 text-center max-w-4xl mx-auto shrink-0 px-4">
+          <div className="flex items-center justify-center gap-2 mb-1 animate-fade-in">
+            <div className="bg-[#0b3294] border-2 border-[#fbdf7e]/60 px-5 py-2.5 rounded-xl flex items-center justify-center shadow-2xl shadow-black/40 select-none">
+              <span className="font-serif font-extrabold text-[#fbdf7e] text-sm md:text-base tracking-wide uppercase pr-1.5">GD</span>
+              
+              {/* Iconic flying gold bird symbol */}
+              <div className="w-8 h-5 select-none pb-0.5">
+                <svg viewBox="0 0 100 64" className="w-full h-full filter drop-shadow-[0_1.5px_2px_rgba(251,223,126,0.5)]" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path 
+                    d="M5 45C22 41 40 18 32 4C41 15 45 28 69 30C83 29 90 22 93 17C86 26 75 33 66 36C56 39 46 47 43 59C41 47 25 43 5 45ZM43 59C38 48 20 46 5 45M5 45C10 40 22 40 32 4" 
+                    fill="url(#goldGradientLogoApp)" 
+                    stroke="url(#goldGradientLogoApp)"
+                    strokeWidth="0.5"
+                  />
+                  <defs>
+                    <linearGradient id="goldGradientLogoApp" x1="5" y1="4" x2="93" y2="59" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#FFF7D6" />
+                      <stop offset="25%" stopColor="#FBDF7E" />
+                      <stop offset="65%" stopColor="#D4AF37" />
+                      <stop offset="100%" stopColor="#916B00" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              
+              <span className="font-serif font-extrabold text-[#fbdf7e] text-sm md:text-base tracking-wide uppercase pl-1.5">GOENKA</span>
             </div>
-            
-            <span className="font-serif font-extrabold text-[#fbdf7e] text-sm md:text-base tracking-wide uppercase pl-1.5">GOENKA</span>
           </div>
-        </div>
-        <div className="text-[10px] text-[#fbdf7e] font-sans font-black tracking-[0.3em] uppercase leading-none mt-1">
-          SMART DISPERSAL PORTAL
-        </div>
-      </header>
+          <div className="text-[10px] text-[#fbdf7e] font-sans font-black tracking-[0.3em] uppercase leading-none mt-1">
+            SMART DISPERSAL PORTAL
+          </div>
+        </header>
+      )}
 
       {/* MASTER RESPONSIVE GRID PANEL */}
-      <main className="relative z-10 flex-grow w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-3 pb-12">
+      <main className={`relative z-10 flex-grow w-full mx-auto px-4 md:px-6 lg:px-8 py-3 pb-12 flex flex-col justify-center transition-all duration-300 ${isLoggedIn ? 'max-w-7xl' : 'max-w-md min-h-[calc(100vh-40px)]'}`}>
         
         {/* RESPONSIVE SEGMENTED LEVEL BAR */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 bg-slate-900/65 backdrop-blur-md border border-slate-800 p-3.5 rounded-2xl shadow-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <h2 className="text-xs font-black uppercase tracking-wider text-slate-300">
-              Select Campus Gateway
-            </h2>
+        {isLoggedIn && (
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 bg-slate-900/65 backdrop-blur-md border border-slate-800 p-3.5 rounded-2xl shadow-xl animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <h2 className="text-xs font-black uppercase tracking-wider text-slate-300">
+                Select Campus Gateway
+              </h2>
+            </div>
+
+            {/* Core Navigation Selector Tabs */}
+            <div className="flex flex-wrap gap-1.5 w-full md:w-auto font-sans">
+              <button
+                id="role-switch-home"
+                onClick={() => {
+                  setActiveTab('home');
+                }}
+                className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'home' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent cursor-pointer'}`}
+              >
+                <LayoutDashboard size={14} className={activeTab === 'home' ? 'text-amber-400' : 'text-slate-500'} />
+                Home Screen
+              </button>
+
+              <button
+                id="role-switch-admin"
+                onClick={() => {
+                  setActiveTab('staff');
+                  setActiveRole('admin');
+                  setStaffLoginType('principal');
+                  setLoginUsername('admin');
+                  setLoginPassword('');
+                  setLoginError('');
+                }}
+                className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'staff' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent cursor-pointer'}`}
+              >
+                <GraduationCap size={14} className={activeTab === 'staff' ? 'text-amber-400' : 'text-slate-500'} />
+                Principal / Teacher
+              </button>
+
+              <button
+                id="role-switch-parent"
+                onClick={() => {
+                  setActiveTab('parent');
+                  setActiveRole('parent');
+                  setLoginUsername('');
+                  setLoginPassword('');
+                  setLoginError('');
+                }}
+                className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'parent' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent cursor-pointer'}`}
+              >
+                <Smartphone size={14} className={activeTab === 'parent' ? 'text-amber-400' : 'text-slate-500'} />
+                Parent Portal
+              </button>
+
+              <button
+                id="role-switch-security"
+                onClick={() => {
+                  setActiveTab('gate');
+                  setActiveRole('security');
+                  setLoginUsername('gate');
+                  setLoginPassword('');
+                  setLoginError('');
+                }}
+                className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'gate' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent cursor-pointer'}`}
+              >
+                <ShieldCheck size={14} className={activeTab === 'gate' ? 'text-amber-400' : 'text-slate-500'} />
+                Gate Terminal
+              </button>
+            </div>
           </div>
-
-          {/* Core Navigation Selector Tabs */}
-          <div className="flex flex-wrap gap-1.5 w-full md:w-auto font-sans">
-            <button
-              id="role-switch-home"
-              onClick={() => {
-                setActiveTab('home');
-              }}
-              className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'home' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent cursor-pointer'}`}
-            >
-              <LayoutDashboard size={14} className={activeTab === 'home' ? 'text-amber-400' : 'text-slate-500'} />
-              Home Screen
-            </button>
-
-            <button
-              id="role-switch-admin"
-              onClick={() => {
-                setActiveTab('staff');
-                setActiveRole('admin');
-                setStaffLoginType('principal');
-                setLoginUsername('admin');
-                setLoginPassword('');
-                setLoginError('');
-              }}
-              className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'staff' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent cursor-pointer'}`}
-            >
-              <GraduationCap size={14} className={activeTab === 'staff' ? 'text-amber-400' : 'text-slate-500'} />
-              Principal / Teacher
-            </button>
-
-            <button
-              id="role-switch-parent"
-              onClick={() => {
-                setActiveTab('parent');
-                setActiveRole('parent');
-                setLoginUsername('');
-                setLoginPassword('');
-                setLoginError('');
-              }}
-              className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'parent' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent cursor-pointer'}`}
-            >
-              <Smartphone size={14} className={activeTab === 'parent' ? 'text-amber-400' : 'text-slate-500'} />
-              Parent Portal
-            </button>
-
-            <button
-              id="role-switch-security"
-              onClick={() => {
-                setActiveTab('gate');
-                setActiveRole('security');
-                setLoginUsername('gate');
-                setLoginPassword('');
-                setLoginError('');
-              }}
-              className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-bold tracking-wider uppercase transition-all duration-300 ${activeTab === 'gate' ? 'bg-[#0b3294] text-white shadow-md shadow-[#0b3294]/30 border border-[#fbdf7e]/35 scale-[1.02]' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-transparent cursor-pointer'}`}
-            >
-              <ShieldCheck size={14} className={activeTab === 'gate' ? 'text-amber-400' : 'text-slate-500'} />
-              Gate Terminal
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* 2-COLUMN GRID (Left column: Active Hub content, Right column: Live Analytics & Sheets Hub) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className={isLoggedIn ? "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" : "w-full flex justify-center py-4"}>
           
           {/* LEFT 8-COLUMNS: MAIN WORKSPACE CONTAINER */}
-          <div className="lg:col-span-8 flex flex-col gap-6 font-sans">
+          <div className={isLoggedIn ? "lg:col-span-8 flex flex-col gap-6 font-sans w-full" : "w-full max-w-[420px] flex flex-col gap-6 font-sans"}>
 
             {/* Unified Simulated Android Device / App Frame */}
-            <div className="bg-slate-950 border border-slate-850 rounded-3xl overflow-hidden shadow-2xl shadow-black/80 flex flex-col relative">
+            <div className={`bg-slate-950 flex flex-col relative overflow-hidden shadow-2xl transition-all duration-300 ${isLoggedIn ? 'border border-slate-850 rounded-3xl' : 'border-[12px] border-slate-900 rounded-[56px] shadow-black/95 min-h-[720px] aspect-[9/19.5]'}`}>
               
               {/* Interactive Workspace App Views */}
               <div className="flex-grow">
@@ -1803,8 +1809,8 @@ export default function App() {
           </div>
 
 
-          {/* RIGHT 4-COLUMNS: REAL-TIME ANALYTICS & GOOGLE SHEETS DASHBOARD */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
+          {isLoggedIn && (
+            <div className="lg:col-span-4 flex flex-col gap-6">
             
             {/* REAL-TIME SYSTEM LIVE STATS GRID */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl relative overflow-hidden">
@@ -2226,21 +2232,24 @@ export default function App() {
             </div>
 
           </div>
+          )}
 
         </div>
 
       </main>
 
       {/* BRAND FOOTER ACCENT */}
-      <footer className="relative z-10 bg-slate-950/40 py-5 px-4 text-center text-[10px] text-slate-550 border-t border-slate-900/60 shrink-0">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-500 font-semibold text-[10.5px]">
-          <p>© 2026 GD Goenka Public School. Responsive Smart Dispersal Gateway Portals.</p>
-          <div className="flex gap-4 font-mono text-[9px] text-slate-655 uppercase tracking-wider">
-            <span>Durable Storage: Local Sandbox</span>
-            <span>Cloud Sync: Active Sheets Database</span>
+      {isLoggedIn && (
+        <footer className="relative z-10 bg-slate-950/40 py-5 px-4 text-center text-[10px] text-slate-550 border-t border-slate-900/60 shrink-0">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-500 font-semibold text-[10.5px]">
+            <p>© 2026 GD Goenka Public School. Responsive Smart Dispersal Gateway Portals.</p>
+            <div className="flex gap-4 font-mono text-[9px] text-slate-655 uppercase tracking-wider">
+              <span>Durable Storage: Local Sandbox</span>
+              <span>Cloud Sync: Active Sheets Database</span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
       {/* Reusable non-native custom dialog */}
       <CustomDialog
