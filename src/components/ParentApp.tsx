@@ -4,7 +4,8 @@ import { Student, PickupRequest, SecurityLog, AppNotification, EmailLog } from '
 import { 
   CreditCard, UserCheck, History, Bell, Settings, ArrowRight, Download, 
   Upload, Sparkles, Check, Phone, Mail, FileText, AlertCircle, Trash2, 
-  UserPlus, RefreshCw, Smartphone, Eye, CheckCircle, ArrowLeft
+  UserPlus, RefreshCw, Smartphone, Eye, CheckCircle, ArrowLeft,
+  ChevronUp, ChevronDown
 } from 'lucide-react';
 import { svgAvatars } from '../mockData';
 
@@ -1361,6 +1362,36 @@ export default function ParentApp({
         >
           <Settings size={17} />
           <span className="text-[9.5px] mt-0.5">Settings</span>
+        </button>
+      </div>
+
+      {/* Floating Scroll Helper Buttons */}
+      <div className="absolute bottom-16 right-3.5 z-30 flex flex-col gap-1.5 animate-fade-in select-none">
+        <button
+          type="button"
+          onClick={() => {
+            const container = document.getElementById('parent-scroll-container');
+            if (container) {
+              container.scrollBy({ top: -180, behavior: 'smooth' });
+            }
+          }}
+          className="w-7.5 h-7.5 rounded-full bg-slate-950/95 text-white flex items-center justify-center hover:bg-slate-850 shadow-md border border-slate-800 transition active:scale-90 cursor-pointer"
+          title="Scroll Up"
+        >
+          <ChevronUp size={15} className="text-amber-400" />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const container = document.getElementById('parent-scroll-container');
+            if (container) {
+              container.scrollBy({ top: 180, behavior: 'smooth' });
+            }
+          }}
+          className="w-7.5 h-7.5 rounded-full bg-slate-950/95 text-white flex items-center justify-center hover:bg-slate-850 shadow-md border border-slate-800 transition active:scale-90 cursor-pointer"
+          title="Scroll Down"
+        >
+          <ChevronDown size={15} className="text-amber-400" />
         </button>
       </div>
 
