@@ -4,7 +4,7 @@ import { Student, PickupRequest, SecurityLog, AppNotification, EmailLog } from '
 import { 
   CreditCard, UserCheck, History, Bell, Settings, ArrowRight, Download, 
   Upload, Sparkles, Check, Phone, Mail, FileText, AlertCircle, Trash2, 
-  UserPlus, RefreshCw, Smartphone, Eye, CheckCircle
+  UserPlus, RefreshCw, Smartphone, Eye, CheckCircle, ArrowLeft
 } from 'lucide-react';
 import { svgAvatars } from '../mockData';
 
@@ -401,14 +401,28 @@ export default function ParentApp({
       {/* Immersive Android Styled Toolbar Header */}
       <div className="bg-slate-900 text-white border-b border-slate-850 px-3.5 py-3 flex items-center justify-between sticky top-0 z-10 shrink-0 shadow-sm">
         <div className="flex items-center gap-2">
+          {activeScreen !== 'dashboard' && (
+            <button
+              onClick={() => setActiveScreen('dashboard')}
+              className="mr-1 flex items-center gap-1.5 bg-slate-800 hover:bg-slate-750 text-slate-100 border border-slate-700 px-2 py-1 rounded-lg text-[9.5px] font-bold cursor-pointer transition active:scale-95"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft size={11} className="text-amber-400" />
+              <span>Back</span>
+            </button>
+          )}
           
           {/* Linked sibling inline switcher */}
           <div className="relative">
             <button 
               id="parent-child-picker-trigger"
-              onClick={() => setShowChildPicker(!showChildPicker)}
-              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-750 px-2.5 py-1.5 rounded-xl border border-slate-700 transition text-[10px] font-bold text-slate-100"
-              title="Click to switch links between siblings"
+              onClick={() => {
+                if (filteredStudents.length > 1) {
+                  setShowChildPicker(!showChildPicker);
+                }
+              }}
+              className={`flex items-center gap-1.5 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 transition text-[10px] font-bold text-slate-100 ${filteredStudents.length > 1 ? 'hover:bg-slate-750 cursor-pointer' : 'cursor-default'}`}
+              title={filteredStudents.length > 1 ? "Click to switch links between siblings" : undefined}
             >
               <img 
                 referrerPolicy="no-referrer" 
@@ -420,10 +434,10 @@ export default function ParentApp({
                 <span className="block text-[6px] text-slate-400 font-mono font-bold leading-none mb-0.5">ACTIVE CHILD</span>
                 {activeStudent?.name}
               </div>
-              <span className="text-[7.5px] text-amber-400">▼</span>
+              {filteredStudents.length > 1 && <span className="text-[7.5px] text-amber-400">▼</span>}
             </button>
 
-             {showChildPicker && (
+             {filteredStudents.length > 1 && showChildPicker && (
               <div id="parent-child-picker-dropdown" className="absolute left-0 mt-2 w-48 bg-slate-950 border border-slate-800 rounded-2xl shadow-xl py-1 z-30 animate-in fade-in duration-100">
                 <p className="text-[8px] font-black text-slate-400 px-3 py-1.5 uppercase tracking-wider border-b border-slate-900 mb-1">Linked Profiles</p>
                 {filteredStudents.map((student, idx) => (
@@ -471,7 +485,7 @@ export default function ParentApp({
       </div>
 
       {/* Main active app body scroll area */}
-      <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-4">
+      <div id="parent-scroll-container" className="flex-1 overflow-y-auto px-3.5 py-4 space-y-4">
 
               {/* Dashboard Home */}
               {activeScreen === 'dashboard' && (

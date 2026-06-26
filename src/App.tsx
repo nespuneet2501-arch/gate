@@ -36,7 +36,8 @@ import {
 import { 
   ShieldCheck, Smartphone, User, Users, CheckCircle, Clock, Calendar, 
   Sparkles, HelpCircle, AlertCircle, RefreshCw, Layers, Database, Link2,
-  LogOut, GraduationCap, Lock, Building, MapPin, Key, Radio, LayoutDashboard, Shield, Flame, Power
+  LogOut, GraduationCap, Lock, Building, MapPin, Key, Radio, LayoutDashboard, Shield, Flame, Power,
+  ArrowLeft, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { CustomDialog, DialogType } from './components/CustomDialog';
 
@@ -1746,16 +1747,16 @@ export default function App() {
                           onClick={() => {
                             setActiveTab('home'); // Go to home instead of logging out!
                           }}
-                          className="text-[11px] bg-red-600 hover:bg-red-500 hover:scale-[1.01] px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold text-white ml-2 cursor-pointer"
+                          className="text-[11px] bg-[#fbdf7e] hover:bg-[#fbdf7e]/90 text-slate-950 hover:scale-[1.01] px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold cursor-pointer"
                         >
-                          <LogOut size={12} />
-                          Minimize App
+                          <ArrowLeft size={12} />
+                          Back to Launcher
                         </button>
                       </div>
                     </div>
 
                     {/* Main Admin Console Page */}
-                    <div className="flex-grow overflow-x-hidden p-4 md:p-6 bg-slate-50 min-h-0 flex flex-col">
+                    <div id="faculty-scroll-container" className="flex-grow overflow-x-hidden overflow-y-auto p-4 md:p-6 bg-slate-50 min-h-0 flex flex-col">
                       <AdminPanel
                         students={students}
                         setStudents={setStudents}
@@ -1799,8 +1800,8 @@ export default function App() {
                           }}
                           className="text-[11.5px] bg-[#0b3294] hover:bg-[#0b3294]/85 hover:scale-[1.01] border-2 border-[#fbdf7e]/40 px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-black text-white cursor-pointer self-end sm:self-auto"
                         >
-                          <LogOut size={12} />
-                          Minimize App
+                          <ArrowLeft size={12} />
+                          Back to Launcher
                         </button>
                       </div>
 
@@ -1846,15 +1847,15 @@ export default function App() {
                         onClick={() => {
                           setActiveTab('home'); // Minimize to Home instead of disconnecting!
                         }}
-                        className="text-[11px] bg-red-950 hover:bg-red-900 border border-red-900/50 hover:scale-[1.01] px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold text-red-200 self-end sm:self-auto cursor-pointer"
+                        className="text-[11px] bg-sky-700 hover:bg-sky-600 border border-sky-600/50 hover:scale-[1.01] px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold text-white self-end sm:self-auto cursor-pointer"
                       >
-                        <LogOut size={12} strokeWidth={2.5} />
-                        Minimize Terminal
+                        <ArrowLeft size={12} strokeWidth={2.5} />
+                        Back to Launcher
                       </button>
                     </div>
 
                     {/* Gate Security core application screen */}
-                    <div className="flex-grow min-h-0 relative flex flex-col bg-slate-900 text-slate-100">
+                    <div id="security-scroll-container" className="flex-grow min-h-0 relative flex flex-col overflow-y-auto bg-slate-900 text-slate-100">
                       <SecurityDashboard
                         students={students}
                         pickupRequests={pickupRequests}
@@ -2364,6 +2365,88 @@ export default function App() {
         onConfirm={dialogState.onConfirm}
         onCancel={closeDialog}
       />
+
+      {/* Global Accessibility Scroll & Navigation Control Dock */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 bg-slate-900/95 backdrop-blur-md p-3 rounded-2xl border border-slate-800 shadow-2xl animate-fade-in text-white select-none w-44">
+        <div className="text-[9px] font-black tracking-widest text-[#fbdf7e] uppercase border-b border-slate-800 pb-1.5 text-center">
+          ⚡ Accessibility Dock
+        </div>
+        
+        {activeTab !== 'home' && (
+          <button
+            onClick={() => {
+              setActiveTab('home');
+              setLoginUsername('');
+              setLoginPassword('');
+              setLoginError('');
+            }}
+            className="flex items-center justify-center gap-1.5 bg-[#fbdf7e] hover:bg-[#fbdf7e]/90 text-slate-950 font-bold px-3 py-2 rounded-xl text-[10px] uppercase tracking-wider transition cursor-pointer active:scale-95 shadow-lg border border-slate-700/30"
+            title="Back to Launcher Home Screen"
+          >
+            <ArrowLeft size={12} />
+            <span>Back to Launcher</span>
+          </button>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const scrollable = document.querySelector('#faculty-scroll-container, #security-scroll-container, #parent-scroll-container, .overflow-y-auto');
+              if (scrollable) {
+                scrollable.scrollBy({ top: -180, behavior: 'smooth' });
+              }
+              window.scrollBy({ top: -180, behavior: 'smooth' });
+            }}
+            className="flex-1 flex flex-col items-center justify-center bg-slate-850 hover:bg-slate-800 text-slate-200 p-2 rounded-xl border border-slate-700 transition cursor-pointer active:scale-95"
+            title="Scroll Up"
+          >
+            <ChevronUp size={16} className="text-[#fbdf7e]" />
+            <span className="text-[7.5px] font-extrabold uppercase mt-0.5">Up</span>
+          </button>
+
+          <button
+            onClick={() => {
+              const scrollable = document.querySelector('#faculty-scroll-container, #security-scroll-container, #parent-scroll-container, .overflow-y-auto');
+              if (scrollable) {
+                scrollable.scrollBy({ top: 180, behavior: 'smooth' });
+              }
+              window.scrollBy({ top: 180, behavior: 'smooth' });
+            }}
+            className="flex-1 flex flex-col items-center justify-center bg-slate-850 hover:bg-slate-800 text-slate-200 p-2 rounded-xl border border-slate-700 transition cursor-pointer active:scale-95"
+            title="Scroll Down"
+          >
+            <ChevronDown size={16} className="text-[#fbdf7e]" />
+            <span className="text-[7.5px] font-extrabold uppercase mt-0.5">Down</span>
+          </button>
+        </div>
+
+        <div className="flex gap-2 text-[7.5px] font-bold uppercase">
+          <button
+            onClick={() => {
+              const scrollable = document.querySelector('#faculty-scroll-container, #security-scroll-container, #parent-scroll-container, .overflow-y-auto');
+              if (scrollable) {
+                scrollable.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex-1 text-center bg-slate-950 hover:bg-slate-900 text-slate-400 py-1 rounded-lg border border-slate-800 cursor-pointer"
+          >
+            To Top
+          </button>
+          <button
+            onClick={() => {
+              const scrollable = document.querySelector('#faculty-scroll-container, #security-scroll-container, #parent-scroll-container, .overflow-y-auto');
+              if (scrollable) {
+                scrollable.scrollTo({ top: scrollable.scrollHeight, behavior: 'smooth' });
+              }
+              window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }}
+            className="flex-1 text-center bg-slate-950 hover:bg-slate-900 text-slate-400 py-1 rounded-lg border border-slate-800 cursor-pointer"
+          >
+            To Bottom
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
