@@ -1215,7 +1215,11 @@ export default function App() {
       )}
 
       {/* MASTER RESPONSIVE GRID PANEL */}
-      <main className={`relative z-10 flex-grow w-full mx-auto px-4 md:px-6 lg:px-8 py-3 pb-12 flex flex-col justify-center transition-all duration-300 ${isAdminOrTeacher ? 'max-w-7xl' : 'max-w-md min-h-[calc(100vh-40px)]'}`}>
+      <main className={`relative z-10 flex-grow w-full mx-auto transition-all duration-300 flex flex-col justify-center ${
+        isAdminOrTeacher 
+          ? 'max-w-7xl px-4 md:px-6 lg:px-8 py-3 pb-12' 
+          : 'w-full max-w-full sm:max-w-md px-0 sm:px-4 py-0 sm:py-3 pb-0 sm:pb-12 min-h-[100dvh] sm:min-h-[calc(100vh-40px)]'
+      }`}>
         
         {/* RESPONSIVE SEGMENTED LEVEL BAR */}
         {isAdminOrTeacher && (
@@ -1290,16 +1294,20 @@ export default function App() {
         )}
 
         {/* 2-COLUMN GRID (Left column: Active Hub content, Right column: Live Analytics & Sheets Hub) */}
-        <div className={isAdminOrTeacher ? "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" : "w-full flex justify-center py-4"}>
+        <div className={isAdminOrTeacher ? "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" : "w-full flex justify-center py-0 sm:py-4"}>
           
           {/* LEFT 8-COLUMNS: MAIN WORKSPACE CONTAINER */}
-          <div className={isAdminOrTeacher ? "lg:col-span-8 flex flex-col gap-6 font-sans w-full" : "w-full max-w-[420px] flex flex-col gap-6 font-sans"}>
+          <div className={isAdminOrTeacher ? "lg:col-span-8 flex flex-col gap-6 font-sans w-full" : "w-full sm:max-w-[420px] flex flex-col gap-0 sm:gap-6 font-sans"}>
 
             {/* Unified Simulated Android Device / App Frame */}
-            <div className={`bg-slate-950 flex flex-col relative overflow-hidden shadow-2xl transition-all duration-300 ${isAdminOrTeacher ? 'border border-slate-850 rounded-3xl' : 'border-[12px] border-slate-900 rounded-[56px] shadow-black/95 h-[760px] max-h-[82vh] w-auto aspect-[9/19.5] mx-auto'}`}>
+            <div className={`bg-slate-950 flex flex-col relative overflow-hidden shadow-2xl transition-all duration-300 ${
+              isAdminOrTeacher 
+                ? 'border border-slate-850 rounded-3xl' 
+                : 'w-full h-[100dvh] sm:h-[760px] sm:max-h-[82vh] sm:w-auto sm:aspect-[9/19.5] border-0 sm:border-[12px] border-slate-900 rounded-none sm:rounded-[56px] shadow-none sm:shadow-black/95 mx-auto'
+            }`}>
               
               {/* Interactive Workspace App Views */}
-              <div className="flex-grow flex flex-col relative">
+              <div className="flex-grow flex flex-col relative min-h-0 h-full overflow-hidden">
                 
                 {isAppClosed ? (
                   <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center text-center p-6 z-50 animate-fade-in min-h-[550px]">
@@ -1720,37 +1728,37 @@ export default function App() {
                   <div className="bg-white text-slate-900 relative overflow-hidden flex flex-col h-full flex-grow min-h-0 w-full animate-fade-in">
                     
                     {/* Faculty App Bar */}
-                    <div className="bg-[#0b3294] text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md">
-                      <div className="flex items-center gap-2.5">
-                        <div className="bg-[#fbdf7e] text-slate-950 p-2.5 rounded-xl">
-                          <GraduationCap size={18} />
+                    <div className="bg-[#0b3294] text-white py-2 px-3 flex flex-row items-center justify-between gap-2 shadow-sm shrink-0 border-b border-[#0b3294]/80">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-[#fbdf7e] text-slate-950 p-1.5 rounded-lg shrink-0">
+                          <GraduationCap size={14} />
                         </div>
-                        <div>
-                          <div className="text-[10px] text-amber-300/90 font-mono tracking-widest font-black uppercase">FACULTY CONTROLLER HUB</div>
-                          <h3 className="text-sm font-bold tracking-tight">
+                        <div className="leading-tight">
+                          <div className="text-[8px] text-amber-300 font-mono tracking-wider font-black uppercase">FACULTY CONTROLLER HUB</div>
+                          <h3 className="text-[10.5px] font-bold tracking-tight text-slate-100">
                             Logged in as: {loggedInRole === 'principal' ? 'Principal Dr. R. K. Goenka' : 'Teacher Ms. Ananya Sharma'}
                           </h3>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={handleResetToFactorySettings}
                           title="Reset database back to default seed students list"
-                          className="text-[11px] bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold text-white cursor-pointer"
+                          className="text-[10px] bg-white/10 hover:bg-white/20 border border-white/20 px-2 py-1 rounded-lg transition-all flex items-center gap-1 font-bold text-white cursor-pointer"
                         >
-                          <RefreshCw size={12} />
-                          Reset Seed
+                          <RefreshCw size={10} />
+                          Reset
                         </button>
 
                         <button
                           onClick={() => {
                             setActiveTab('home'); // Go to home instead of logging out!
                           }}
-                          className="text-[11px] bg-[#fbdf7e] hover:bg-[#fbdf7e]/90 text-slate-950 hover:scale-[1.01] px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold cursor-pointer"
+                          className="text-[10px] bg-[#fbdf7e] hover:bg-[#fbdf7e]/90 text-slate-950 hover:scale-[1.01] px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 font-extrabold cursor-pointer"
                         >
-                          <ArrowLeft size={12} />
-                          Back to Launcher
+                          <ArrowLeft size={10} />
+                          Launcher
                         </button>
                       </div>
                     </div>
@@ -1781,15 +1789,15 @@ export default function App() {
                     <div className="bg-white text-slate-900 relative overflow-hidden flex flex-col h-full flex-grow min-h-0 w-full animate-fade-in">
                       
                       {/* Parent App Bar */}
-                      <div className="bg-slate-900 text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md">
-                        <div className="flex items-center gap-2.5">
-                          <div className="bg-emerald-600 text-white p-2.5 rounded-xl">
-                            <Smartphone size={18} />
+                      <div className="bg-slate-900 text-white py-2 px-3 flex flex-row items-center justify-between gap-2 shadow-sm shrink-0 border-b border-slate-800">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-emerald-600 text-white p-1.5 rounded-lg shrink-0">
+                            <Smartphone size={14} />
                           </div>
-                          <div>
-                            <div className="text-[10px] text-emerald-400 font-mono tracking-widest font-black uppercase">SECURE GUARDIAN FEED</div>
-                            <h3 className="text-sm font-bold tracking-tight">
-                              {loggedInStudent ? `${loggedInStudent.fatherName} / ${loggedInStudent.motherName} • Linked Pupil: ${loggedInStudent.name}` : 'Parent Secure Portal'}
+                          <div className="leading-tight">
+                            <div className="text-[8px] text-emerald-400 font-mono tracking-wider font-black uppercase">SECURE GUARDIAN FEED</div>
+                            <h3 className="text-[10.5px] font-bold tracking-tight text-slate-200">
+                              {loggedInStudent ? `${loggedInStudent.fatherName} / ${loggedInStudent.motherName} • ${loggedInStudent.name}` : 'Parent Secure Portal'}
                             </h3>
                           </div>
                         </div>
@@ -1798,10 +1806,10 @@ export default function App() {
                           onClick={() => {
                             setActiveTab('home'); // Minimize to Home instead of logging out!
                           }}
-                          className="text-[11.5px] bg-[#0b3294] hover:bg-[#0b3294]/85 hover:scale-[1.01] border-2 border-[#fbdf7e]/40 px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-black text-white cursor-pointer self-end sm:self-auto"
+                          className="text-[10px] bg-[#0b3294] hover:bg-[#0b3294]/85 border border-[#fbdf7e]/30 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 font-extrabold text-white cursor-pointer shrink-0"
                         >
-                          <ArrowLeft size={12} />
-                          Back to Launcher
+                          <ArrowLeft size={11} />
+                          Launcher
                         </button>
                       </div>
 
@@ -1830,14 +1838,14 @@ export default function App() {
                   <div className="bg-white text-slate-100 relative overflow-hidden flex flex-col h-full flex-grow min-h-0 w-full animate-fade-in">
                     
                     {/* Gate Terminal Bar */}
-                    <div className="bg-slate-950 text-white py-4 px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md border-b border-slate-900">
-                      <div className="flex items-center gap-2.5">
-                        <div className="bg-sky-600 p-2.5 rounded-xl">
-                          <ShieldCheck size={18} />
+                    <div className="bg-slate-950 text-white py-2 px-3 flex flex-row items-center justify-between gap-2 shadow-sm border-b border-slate-900 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-sky-600 p-1.5 rounded-lg shrink-0">
+                          <ShieldCheck size={14} />
                         </div>
-                        <div>
-                          <div className="text-[10px] text-sky-400 font-mono tracking-widest font-black uppercase">TACTICAL DISPERSAL DISPATCH</div>
-                          <h3 className="text-sm font-bold tracking-tight">
+                        <div className="leading-tight">
+                          <div className="text-[8px] text-sky-400 font-mono tracking-wider font-black uppercase">TACTICAL DISPERSAL DISPATCH</div>
+                          <h3 className="text-[10.5px] font-bold tracking-tight text-slate-200">
                             Officer Guard Terminal • GD Goenka Bus Gate
                           </h3>
                         </div>
@@ -1847,10 +1855,10 @@ export default function App() {
                         onClick={() => {
                           setActiveTab('home'); // Minimize to Home instead of disconnecting!
                         }}
-                        className="text-[11px] bg-sky-700 hover:bg-sky-600 border border-sky-600/50 hover:scale-[1.01] px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold text-white self-end sm:self-auto cursor-pointer"
+                        className="text-[10px] bg-sky-700 hover:bg-sky-600 border border-sky-600/50 hover:scale-[1.01] px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 font-extrabold text-white cursor-pointer shrink-0"
                       >
-                        <ArrowLeft size={12} strokeWidth={2.5} />
-                        Back to Launcher
+                        <ArrowLeft size={11} strokeWidth={2.5} />
+                        Launcher
                       </button>
                     </div>
 

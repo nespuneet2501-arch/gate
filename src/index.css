@@ -7,18 +7,42 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
-/* Custom scrollbars for a cleaner look */
+/* Custom high-contrast scrollbars for perfect accessibility and dragability */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 9px;
+  height: 9px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(226, 232, 240, 0.85); /* clear light track */
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
-  border-radius: 4px;
+  background: rgba(11, 50, 148, 0.65); /* prominent royal blue thumb */
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.5);
+  background: rgba(11, 50, 148, 0.85);
+}
+
+/* Custom gold & slate scrollbars for immersive dark views */
+.bg-slate-900 ::-webkit-scrollbar-track,
+.bg-slate-950 ::-webkit-scrollbar-track,
+.bg-slate-900::-webkit-scrollbar-track,
+.bg-slate-950::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.8);
+}
+.bg-slate-900 ::-webkit-scrollbar-thumb,
+.bg-slate-950 ::-webkit-scrollbar-thumb,
+.bg-slate-900::-webkit-scrollbar-thumb,
+.bg-slate-950::-webkit-scrollbar-thumb {
+  background: rgba(251, 223, 126, 0.7); /* elegant gold thumb */
+  border: 1.5px solid rgba(15, 23, 42, 0.9);
+  border-radius: 9999px;
+}
+.bg-slate-900 ::-webkit-scrollbar-thumb:hover,
+.bg-slate-950 ::-webkit-scrollbar-thumb:hover,
+.bg-slate-900::-webkit-scrollbar-thumb:hover,
+.bg-slate-950::-webkit-scrollbar-thumb:hover {
+  background: rgba(251, 223, 126, 0.9);
 }
